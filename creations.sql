@@ -1,298 +1,312 @@
 -- Creacion de tablas
 
--- TABLA DE PRODUCTOS RECOMENDADOS PARA CLIENTES
-CREATE TABLE ProductoRecomendadoParaCliente (
-    clienteId INT NOT NULL,
-    productoRecomendadoId INT NOT NULL,
-    fechaRecomendacion DATE NOT NULL,
-    mensaje VARCHAR(255) NOT NULL,
-    CONSTRAINT CHK_Mensaje_No_Nulo CHECK (mensaje <> ''),
-    CONSTRAINT PK_ProductoRecomendadoParaCliente PRIMARY KEY (clienteId, productoRecomendadoId)
-);
-
--- TABLA DE CATEGORIA
-CREATE TABLE Categoria (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255),
-    CONSTRAINT CHK_Categoria_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Categoria PRIMARY KEY (id)
-);
-
--- TABLA DE MARCA
+-- CREAMOS LA TABLA MARCA
 CREATE TABLE Marca (
-    id INT NOT NULL,
+    id INT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255),
-    CONSTRAINT CHK_Marca_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Marca PRIMARY KEY (id)
+    descripcion TEXT
 );
 
--- TABLA DEL HISTORIAL DE PRODUCTOS DE UN CLIENTE
-CREATE TABLE HistorialClienteProducto (
-    clienteId INT NOT NULL,
-    productoId INT NOT NULL,
-    fecha DATE NOT NULL,
-    tipoAccion VARCHAR(10) NOT NULL,
-    CONSTRAINT CHK_TipoAccion CHECK (tipoAccion IN ('Busqueda', 'Carrito', 'Compra')),
-    CONSTRAINT PK_HistorialClienteProducto PRIMARY KEY (clienteId, productoId, fecha),
-    CONSTRAINT FK_HistorialClienteProducto_Cliente FOREIGN KEY (clienteId) REFERENCES Cliente(id),
-    CONSTRAINT FK_HistorialClienteProducto_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
+-- CREAMOS LA TABLA CATEGORIA
+CREATE TABLE Categoria (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT
 );
 
--- TABLA CARRITO
-CREATE TABLE Carrito (
-    clienteId INT NOT NULL,
-    productoId INT NOT NULL,
-    fechaAgregado DATE NOT NULL,
-    cantidad INT NOT NULL CHECK (cantidad >= 0),
-    precioPor VARCHAR(10) NOT NULL CHECK (precioPor IN ('PorUnidad', 'PorPesoKg')),
-    CONSTRAINT PK_Carrito PRIMARY KEY (clienteId, productoId, fechaAgregado),
-    CONSTRAINT FK_Carrito_Cliente FOREIGN KEY (clienteId) REFERENCES Cliente(id),
-    CONSTRAINT FK_Carrito_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
+-- CREAMOS LA TABLA CLIENTE
+CREATE TABLE Cliente (
+    id INT PRIMARY KEY,
+    CI VARCHAR(20) NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    correo VARCHAR(100) NOT NULL,
+    sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
+    fechaNacimiento DATE,
+    fechaRegistro DATE NOT NULL
 );
 
--- TABLA TIPOS DE ENVIO
+-- CREAMOS LA TABLA DIRECCION DEL CLIENTE, LA CUAL REFERENCIA A CLIENTE
+CREATE TABLE ClienteDireccion (
+    id INT PRIMARY KEY,
+    clienteId INT,
+    tipoDireccion VARCHAR(15) CHECK (tipoDireccion IN ('Facturacion', 'Envio')),
+    dirLinea1 VARCHAR(100) NOT NULL,
+    ciudadId INT,
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id)
+);
+
+-- CREAMOS LA TABLA PRODUCTO , LA CUAL REFERENCIA A MARCA Y CATEGORIA
+CREATE TABLE Producto (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    codigoBarra VARCHAR(50),
+    descripcion TEXT,
+    tipoPrecio VARCHAR(10) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    esExentoIVA BOOL,
+    categoriald INT,
+    marcald INT,
+    FOREIGN KEY (categoriald) REFERENCES Categoria(id),
+    FOREIGN KEY (marcald) REFERENCES Marca(id)
+);
+
+-- CREAMOS LA TABLA PRODUCTORECOMENDADO, LA CUAL REFERENCIA A PRODUCTO
+CREATE TABLE ProductoRecomendadoParaProducto (
+    productoId INT,
+    productoRecomendadold INT,
+    mensaje TEXT,
+    PRIMARY KEY (productoId, productoRecomendadold),
+    FOREIGN KEY (productoId) REFERENCES Producto(id),
+    FOREIGN KEY (productoRecomendadold) REFERENCES Producto(id)
+);
+
+-- CREAMOS LA TABLA PRODUCTOPARACLIENTE, LA CUAL REFERENCIA A LOS PRODUCTOS Y A CLIENTES
+CREATE TABLE ProductoRecomendadoParaCliente (
+    clienteId INT,
+    productoRecomendadold INT,
+    fechaRecomendacion DATE,
+    mensaje TEXT,
+    PRIMARY KEY (clienteId, productoRecomendadold, fechaRecomendacion),
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id),
+    FOREIGN KEY (productoRecomendadold) REFERENCES Producto(id)
+);
+
+-- CREAMOS LA TABLA TIPO DE ENVIO
 CREATE TABLE TipoEnvio (
-    id INT NOT NULL,
-    nombreEnvio VARCHAR(100) NOT NULL,
-    tiempoEstimadoEntrega INT NOT NULL CHECK (tiempoEstimadoEntrega BETWEEN 0 AND 23),
-    costoEnvio DECIMAL(10, 2) NOT NULL CHECK (costoEnvio >= 0),
-    CONSTRAINT CHK_TipoEnvio_Nombre_No_Nulo CHECK (nombreEnvio <> ''),
-    CONSTRAINT PK_TipoEnvio PRIMARY KEY (id)
+    id INT PRIMARY KEY,
+    nombreEnvio VARCHAR(50) NOT NULL,
+    tiempoEstimadoEntrega INT CHECK (tiempoEstimadoEntrega >= 0),
+    costoEnvio DECIMAL(10, 2) CHECK (costoEnvio >= 0)
 );
 
--- TABLA DE ORDENES ONLINE
-CREATE TABLE OrdenOnline (
-    id INT NOT NULL,
-    clienteId INT NOT NULL,
-    nroOrden VARCHAR(50) NOT NULL,
-    fechaCreacion DATE NOT NULL,
-    tipoEnvioId INT NOT NULL,
-    facturaId INT,
-    CONSTRAINT CHK_OrdenOnline_NroOrden_No_Nulo CHECK (nroOrden <> ''),
-    CONSTRAINT PK_OrdenOnline PRIMARY KEY (id),
-    CONSTRAINT FK_OrdenOnline_Cliente FOREIGN KEY (clienteId) REFERENCES Cliente(id),
-    CONSTRAINT FK_OrdenOnline_TipoEnvio FOREIGN KEY (tipoEnvioId) REFERENCES TipoEnvio(id),
-    CONSTRAINT FK_OrdenOnline_Factura FOREIGN KEY (facturaId) REFERENCES Factura(id)
+-- CREAMOS LA TABLA HISTORIA DE CLIENTE, LA CUAL REFERENCIA A CLIENTE Y PRODUCTO
+CREATE TABLE HistorialClienteProducto (
+    clienteId INT,
+    productoId INT,
+    fecha DATE,
+    tipoAccion VARCHAR(15) CHECK (tipoAccion IN ('Busqueda', 'Carrito', 'Compra')),
+    PRIMARY KEY (clienteId, productoId, fecha),
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
 
--- TABLA DE LOS DETALLES DE ORDEN
-CREATE TABLE OrdenDetalle (
-    id INT NOT NULL,
-    ordenId INT NOT NULL,
-    productoId INT NOT NULL,
-    cantidad INT NOT NULL CHECK (cantidad >= 0),
-    precioPor VARCHAR(10) NOT NULL CHECK (precioPor IN ('PorUnidad', 'PorPesoKg')),
-    CONSTRAINT PK_OrdenDetalle PRIMARY KEY (id),
-    CONSTRAINT FK_OrdenDetalle_Orden FOREIGN KEY (ordenId) REFERENCES OrdenOnline(id),
-    CONSTRAINT FK_OrdenDetalle_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
+-- CREAMOS LA TABLA CARRITO, LA CUAL REFERENCIA A CLIENTE Y PRODUCTO
+CREATE TABLE Carrito (
+    clienteId INT,
+    productoId INT,
+    fechaAgregado DATE,
+    cantidad INT CHECK (cantidad >= 0),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    PRIMARY KEY (clienteId, productoId),
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
 
--- TABLAS DE LAS VENTAS FISICAS
-CREATE TABLE VentaFisica (
-    facturaId INT NOT NULL,
-    sucursalId INT NOT NULL,
-    empleadoId INT NOT NULL,
-    CONSTRAINT PK_VentaFisica PRIMARY KEY (facturaId, sucursalId, empleadoId),
-    CONSTRAINT FK_VentaFisica_Factura FOREIGN KEY (facturaId) REFERENCES Factura(id),
-    CONSTRAINT FK_VentaFisica_Sucursal FOREIGN KEY (sucursalId) REFERENCES Sucursal(id),
-    CONSTRAINT FK_VentaFisica_Empleado FOREIGN KEY (empleadoId) REFERENCES Empleado(id)
-);
-
--- TABLA DE FACTURA
-CREATE TABLE Factura (
-    id INT NOT NULL,
-    fechaEmision DATE NOT NULL,
-    clienteId INT NOT NULL,
-    subTotal DECIMAL(10, 2) NOT NULL CHECK (subTotal >= 0),
-    montoDescuentoTotal DECIMAL(10, 2) NOT NULL CHECK (montoDescuentoTotal >= 0),
-    porcentajeIVA DECIMAL(5, 2) NOT NULL CHECK (porcentajeIVA >= 0),
-    montoIVA DECIMAL(10, 2) NOT NULL CHECK (montoIVA >= 0),
-    montoTotal DECIMAL(10, 2) NOT NULL CHECK (montoTotal >= 0),
-    CONSTRAINT PK_Factura PRIMARY KEY (id),
-    CONSTRAINT FK_Factura_Cliente FOREIGN KEY (clienteId) REFERENCES Cliente(id)
-);
-
--- TABLA DE LOS DETALLES DE FACTURA
-CREATE TABLE FacturaDetalle (
-    id INT NOT NULL,
-    facturaId INT NOT NULL,
-    productoId INT NOT NULL,
-    cantidad INT NOT NULL CHECK (cantidad >= 0),
-    precioPor VARCHAR(10) NOT NULL CHECK (precioPor IN ('PorUnidad', 'PorPesoKg')),
-    CONSTRAINT PK_FacturaDetalle PRIMARY KEY (id),
-    CONSTRAINT FK_FacturaDetalle_Factura FOREIGN KEY (facturaId) REFERENCES Factura(id),
-    CONSTRAINT FK_FacturaDetalle_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
-);
-
--- TABLA DE PAGO
-CREATE TABLE Pago (
-    facturaId INT NOT NULL,
-    nroTransaccion VARCHAR(50) NOT NULL,
-    metodoPagoId INT NOT NULL,
-    CONSTRAINT PK_Pago PRIMARY KEY (facturaId, nroTransaccion),
-    CONSTRAINT FK_Pago_Factura FOREIGN KEY (facturaId) REFERENCES Factura(id),
-    CONSTRAINT FK_Pago_MetodoPago FOREIGN KEY (metodoPagoId) REFERENCES FormaPago(id)
-);
-
--- TABLA DE LAS FORMAS DE PAGO
+-- CREAMOS LA TABLA FORMA DE PAGO
 CREATE TABLE FormaPago (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255),
-    CONSTRAINT CHK_FormaPago_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_FormaPago PRIMARY KEY (id)
+    id INT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    descripcion TEXT
 );
 
--- TABLA DE PROMO
+--CREAMOS LA TABLA FACTURA, LA CUAL REFERENCIA A CLIENTE
+CREATE TABLE Factura (
+    id INT PRIMARY KEY,
+    fechaEmision DATE,
+    clienteId INT,
+    subTotal DECIMAL(10, 2) CHECK (subTotal >= 0),
+    montoDescuentoTotal DECIMAL(10, 2) CHECK (montoDescuentoTotal >= 0),
+    porcentajeIVA DECIMAL(5, 2) CHECK (porcentajeIVA >= 0),
+    montoIVA DECIMAL(10, 2) CHECK (montoIVA >= 0),
+    montoTotal DECIMAL(10, 2) CHECK (montoTotal >= 0),
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id)
+);
+
+-- CREAMOS LA TABLA FACTURA DETALLE, LA CUAL REFERENCIA A FACTURA Y PRODUCTO
+CREATE TABLE FacturaDetalle (
+    id INT PRIMARY KEY,
+    facturaId INT,
+    productoId INT,
+    cantidad INT CHECK (cantidad >= 0),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    FOREIGN KEY (facturaId) REFERENCES Factura(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
+);
+
+-- CREAMOS LA TABLA PAGO, LA CUAL REFERENCIA A FACTURA Y FORMA DE PAGO
+CREATE TABLE Pago (
+    facturaId INT,
+    nroTransaccion VARCHAR(50) NOT NULL,
+    metodoPagoId INT,
+    PRIMARY KEY (facturaId, nroTransaccion),
+    FOREIGN KEY (facturaId) REFERENCES Factura(id),
+    FOREIGN KEY (metodoPagoId) REFERENCES FormaPago(id)
+);
+
+-- CREAMOS LA TABLA ORDEN ONLINE, LA CUAL REFERENCIA A CLIENTE, TIPO DE ENVIO Y A FACTURA
+CREATE TABLE OrdenOnline (
+    id INT PRIMARY KEY,
+    clienteId INT,
+    nroOrden VARCHAR(50) NOT NULL,
+    fechaCreacion DATE,
+    tipoEnvioId INT,
+    facturaId INT,
+    FOREIGN KEY (clienteId) REFERENCES Cliente(id),
+    FOREIGN KEY (tipoEnvioId) REFERENCES TipoEnvio(id),
+    FOREIGN KEY (facturaId) REFERENCES Factura(id)
+);
+
+-- CREAMOS LA TABLA ORDENDETALLE, LA CUAL REFERENCIA A ORDEN ONLINE Y A PRODUCTO
+CREATE TABLE OrdenDetalle (
+    id INT PRIMARY KEY,
+    ordenId INT,
+    productoId INT,
+    cantidad INT CHECK (cantidad >= 0),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    FOREIGN KEY (ordenId) REFERENCES OrdenOnline(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
+);
+
+-- CREAMOS LA TABLA PAIS
+CREATE TABLE Pais (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL
+);
+
+-- CREAMOS LA TABLA ESTADO, LA CUAL REFERENCIA A PAIS
+CREATE TABLE Estado (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    paisId INT,
+    FOREIGN KEY (paisId) REFERENCES Pais(id)
+);
+
+-- CREAMOS LA TABLA CIUDAD, LA CUAL REFERENCIA A ESTADO
+CREATE TABLE Ciudad (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    estadoId INT,
+    FOREIGN KEY (estadoId) REFERENCES Estado(id)
+);
+
+-- CREAMOS LA TABLA PROMO
 CREATE TABLE Promo (
-    id INT NOT NULL,
+    id INT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     slogan VARCHAR(255),
-    codigo VARCHAR(50) NOT NULL,
-    tipoDescuento VARCHAR(10) NOT NULL CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
-    valorDescuento DECIMAL(10, 2) NOT NULL CHECK (valorDescuento >= 0),
-    fechaInicio DATE NOT NULL,
-    fechaFin DATE NOT NULL,
-    tipoPromocion VARCHAR(10) NOT NULL CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos')),
-    CONSTRAINT CHK_Promo_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Promo PRIMARY KEY (id)
+    codigo VARCHAR(50) UNIQUE NOT NULL,
+    tipoDescuento VARCHAR(10) CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
+    valorDescuento DECIMAL(10, 2) CHECK (valorDescuento >= 0),
+    fechaInicio DATE,
+    fechaFin DATE,
+    tipoPromocion VARCHAR(10) CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos'))
 );
 
--- TABLA DE PROMO ESPECIALIZADA
+-- CREAMOS LA TABLA PROMO ESPECIALIZADA, LA CUAL REFERENCIA A PROMO, PRODUCTO, CATEGORIA Y MARCA
 CREATE TABLE PromoEspecializada (
-    id INT NOT NULL,
-    promoId INT NOT NULL,
+    id INT PRIMARY KEY,
+    promoId INT,
     productoId INT,
     categoriaId INT,
     marcaId INT,
-    CONSTRAINT PK_PromoEspecializada PRIMARY KEY (id),
-    CONSTRAINT FK_PromoEspecializada_Promo FOREIGN KEY (promoId) REFERENCES Promo(id),
-    CONSTRAINT FK_PromoEspecializada_Producto FOREIGN KEY (productoId) REFERENCES Producto(id),
-    CONSTRAINT FK_PromoEspecializada_Categoria FOREIGN KEY (categoriaId) REFERENCES Categoria(id),
-    CONSTRAINT FK_PromoEspecializada_Marca FOREIGN KEY (marcaId) REFERENCES Marca(id)
+    FOREIGN KEY (promoId) REFERENCES Promo(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id),
+    FOREIGN KEY (categoriaId) REFERENCES Categoria(id),
+    FOREIGN KEY (marcaId) REFERENCES Marca(id)
 );
 
--- TABLA DE FACTURA PROMO
+-- CREAMOS LA TABLA FACTURA PROMO, LA CUAL REFERENCIA A FACTURA Y PROMO
 CREATE TABLE FacturaPromo (
-    facturaId INT NOT NULL,
-    promoId INT NOT NULL,
-    CONSTRAINT PK_FacturaPromo PRIMARY KEY (facturaId, promoId),
-    CONSTRAINT FK_FacturaPromo_Factura FOREIGN KEY (facturaId) REFERENCES Factura(id),
-    CONSTRAINT FK_FacturaPromo_Promo FOREIGN KEY (promoId) REFERENCES Promo(id)
+    facturaId INT,
+    promoId INT,
+    PRIMARY KEY (facturaId, promoId),
+    FOREIGN KEY (facturaId) REFERENCES Factura(id),
+    FOREIGN KEY (promoId) REFERENCES Promo(id)
 );
 
--- TABLA DE PAIS
-CREATE TABLE Pais (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    CONSTRAINT CHK_Pais_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Pais PRIMARY KEY (id)
-);
-
--- TABLA DE ESTADO
-CREATE TABLE Estado (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    paisId INT NOT NULL,
-    CONSTRAINT CHK_Estado_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Estado PRIMARY KEY (id),
-    CONSTRAINT FK_Estado_Pais FOREIGN KEY (paisId) REFERENCES Pais(id)
-);
-
--- TABLA DE CIUDAD
-CREATE TABLE Ciudad (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    estadoId INT NOT NULL,
-    CONSTRAINT CHK_Ciudad_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Ciudad PRIMARY KEY (id),
-    CONSTRAINT FK_Ciudad_Estado FOREIGN KEY (estadoId) REFERENCES Estado(id)
-);
-
--- TABLA DE SUCURSAL
+-- CREAMOS LA TABLA SUCURSAL, LA CUAL REFERENCIA A CIUDAD
 CREATE TABLE Sucursal (
-    id INT NOT NULL,
+    id INT PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    direccion VARCHAR(255) NOT NULL,
-    telefono VARCHAR(20) NOT NULL,
-    horaAbrir INT NOT NULL CHECK (horaAbrir BETWEEN 0 AND 23),
-    horaCerrar INT NOT NULL CHECK (horaCerrar BETWEEN 0 AND 23),
-    ciudadId INT NOT NULL,
-    CONSTRAINT CHK_Sucursal_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Sucursal PRIMARY KEY (id),
-    CONSTRAINT FK_Sucursal_Ciudad FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
+    direccion VARCHAR(255),
+    telefono VARCHAR(20),
+    horaAbrir INT CHECK (horaAbrir >= 0 AND horaAbrir <= 23),
+    horaCerrar INT CHECK (horaCerrar >= 0 AND horaCerrar <= 23),
+    ciudadId INT,
+    FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
 );
 
--- TABLA DE EMPLEADO
+-- CREAMOS LA TABLA CARGO
+CREATE TABLE Cargo (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    salarioBasePorHora DECIMAL(10, 2) CHECK (salarioBasePorHora >= 0)
+);
+
+-- CREAMOS LA TABLA EMPLEADO, LA CUAL REFERENCIA A CARGO, SUCURSAL Y A EMPLEADO A TRAVEZ DE LA RECURSIVIDAD
 CREATE TABLE Empleado (
-    id INT NOT NULL,
+    id INT PRIMARY KEY,
     CI VARCHAR(20) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100) NOT NULL,
-    sexo CHAR(1) NOT NULL CHECK (sexo IN ('M', 'F')),
-    direccionCorta VARCHAR(255) NOT NULL,
-    cargoId INT NOT NULL,
+    sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
+    direccionCorta VARCHAR(255),
+    cargoId INT,
     empleadoSupervisorId INT,
-    sucursalId INT NOT NULL,
-    fechaContrato DATE NOT NULL,
-    bonoFijoMensual DECIMAL(10, 2) NOT NULL CHECK (bonoFijoMensual >= 0),
-    horaInicio INT NOT NULL CHECK (horaInicio BETWEEN 0 AND 23),
-    horaFin INT NOT NULL CHECK (horaFin BETWEEN 0 AND 23),
-    cantidadDiasTrabajoPorSemana INT NOT NULL CHECK (cantidadDiasTrabajoPorSemana BETWEEN 1 AND 7),
-    CONSTRAINT CHK_Empleado_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT CHK_Empleado_Apellido_No_Nulo CHECK (apellido <> ''),
-    CONSTRAINT PK_Empleado PRIMARY KEY (id),
-    CONSTRAINT FK_Empleado_Cargo FOREIGN KEY (cargoId) REFERENCES Cargo(id),
-    CONSTRAINT FK_Empleado_Sucursal FOREIGN KEY (sucursalId) REFERENCES Sucursal(id)
+    sucursalId INT,
+    fechaContrato DATE,
+    bonoFijoMensual DECIMAL(10, 2) CHECK (bonoFijoMensual >= 0),
+    horaInicio INT CHECK (horaInicio >= 0 AND horaInicio <= 23),
+    horaFin INT CHECK (horaFin >= 0 AND horaFin <= 23),
+    cantidadDiasTrabajoPorSemana INT CHECK (cantidadDiasTrabajoPorSemana >= 1 AND cantidadDiasTrabajoPorSemana <= 7),
+    FOREIGN KEY (cargoId) REFERENCES Cargo(id),
+    FOREIGN KEY (empleadoSupervisorId) REFERENCES Empleado(id),
+    FOREIGN KEY (sucursalId) REFERENCES Sucursal(id)
 );
 
--- TABLA DE CARGO
-CREATE TABLE Cargo (
-    id INT NOT NULL,
-    nombre VARCHAR(100) NOT NULL,
-    descripcion VARCHAR(255),
-    salarioBasePorHora DECIMAL(10, 2) NOT NULL CHECK (salarioBasePorHora >= 0),
-    CONSTRAINT CHK_Cargo_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT PK_Cargo PRIMARY KEY (id)
-);
-
--- TABLA DE INVENTARIO
+-- CREAMOS LA TABLA INVENTARIO, LA CUAL REFERENCIA A PRODUCTO
 CREATE TABLE Inventario (
-    id INT NOT NULL,
-    productoId INT NOT NULL,
-    cantidad INT NOT NULL CHECK (cantidad >= 0),
-    CONSTRAINT PK_Inventario PRIMARY KEY (id),
-    CONSTRAINT FK_Inventario_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
+    id INT PRIMARY KEY,
+    productoId INT,
+    cantidad INT CHECK (cantidad >= 0),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
 
--- TABLA DE PROVEEDOR
+-- CREAMOS LA TABLA PROVEEDOR LA CUAL REFERENCIA A CIUDAD
 CREATE TABLE Proveedor (
-    id INT NOT NULL,
+    id INT PRIMARY KEY,
     RIF VARCHAR(20) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
-    contacto VARCHAR(100) NOT NULL,
-    telefono VARCHAR(20) NOT NULL,
-    correo VARCHAR(100) NOT NULL,
-    ciudadId INT NOT NULL,
-    CONSTRAINT CHK_Proveedor_Nombre_No_Nulo CHECK (nombre <> ''),
-    CONSTRAINT CHK_Proveedor_Contacto_No_Nulo CHECK (contacto <> ''),
-    CONSTRAINT PK_Proveedor PRIMARY KEY (id),
-    CONSTRAINT FK_Proveedor_Ciudad FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
+    contacto VARCHAR(100),
+    telefono VARCHAR(20),
+    correo VARCHAR(100),
+    ciudadId INT,
+    FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
 );
 
--- TABLA DE PROVEDOR ASOCIADA A PRODUCTO
+--CREAMOS LA TABLA PROVEEDORPRODUCTO, LA CUAL REFERENCIA A PROVEEDOR Y A PRODUCTO
 CREATE TABLE ProveedorProducto (
-    id INT NOT NULL,
-    proveedorId INT NOT NULL,
-    productoId INT NOT NULL,
-    fechaCompra DATE NOT NULL,
-    precioPor VARCHAR(10) NOT NULL CHECK (precioPor IN ('PorUnidad', 'PorPesoKg')),
-    cantidad INT NOT NULL CHECK (cantidad >= 0),
-    CONSTRAINT PK_ProveedorProducto PRIMARY KEY (id),
-    CONSTRAINT FK_ProveedorProducto_Proveedor FOREIGN KEY (proveedorId) REFERENCES Proveedor(id),
-    CONSTRAINT FK_ProveedorProducto_Producto FOREIGN KEY (productoId) REFERENCES Producto(id)
+    id INT PRIMARY KEY,
+    proveedorId INT,
+    productoId INT,
+    fechaCompra DATE,
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    cantidad INT CHECK (cantidad >= 0),
+    FOREIGN KEY (proveedorId) REFERENCES Proveedor(id),
+    FOREIGN KEY (productoId) REFERENCES Producto(id)
+);
+
+-- CREAMOS LA TABLA VENTA FISICA, LA CUAL REFERENCIA A FACTURA, SUCURSAL Y EMPLEADO
+CREATE TABLE VentaFisica (
+    facturaId INT,
+    sucursalId INT,
+    empleadoId INT,
+    PRIMARY KEY (facturaId, sucursalId, empleadoId),
+    FOREIGN KEY (facturaId) REFERENCES Factura(id),
+    FOREIGN KEY (sucursalId) REFERENCES Sucursal(id),
+    FOREIGN KEY (empleadoId) REFERENCES Empleado(id)
 );
 
 -- Implementación de triggers
