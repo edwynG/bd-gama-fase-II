@@ -49,14 +49,14 @@ DROP TABLE IF EXISTS VentaFisica;
 -- CREAMOS LA TABLA MARCA
 CREATE TABLE Marca (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     descripcion VARCHAR(MAX)
 );
 
 -- CREAMOS LA TABLA CATEGORIA
 CREATE TABLE Categoria (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     descripcion VARCHAR(MAX)
 );
 
@@ -64,9 +64,9 @@ CREATE TABLE Categoria (
 CREATE TABLE Cliente (
     id INT PRIMARY KEY,
     CI  INT,
-    nombre VARCHAR(50) NOT NULL,
-    apellido VARCHAR(50) NOT NULL,
-    correo VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
+    apellido VARCHAR(MAX) NOT NULL,
+    correo VARCHAR(MAX) NOT NULL,
     sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
     fechaNacimiento DATE,
     fechaRegistro DATE NOT NULL
@@ -76,8 +76,8 @@ CREATE TABLE Cliente (
 CREATE TABLE ClienteDireccion (
     id INT PRIMARY KEY,
     clienteId INT,
-    tipoDireccion VARCHAR(15) CHECK (tipoDireccion IN ('Facturacion', 'Envio')),
-    dirLinea1 VARCHAR(100) NOT NULL,
+    tipoDireccion VARCHAR(MAX) CHECK (tipoDireccion IN ('Facturacion', 'Envio')),
+    dirLinea1 VARCHAR(MAX) NOT NULL,
     ciudadId INT,
     FOREIGN KEY (clienteId) REFERENCES Cliente(id)
 );
@@ -85,10 +85,10 @@ CREATE TABLE ClienteDireccion (
 -- CREAMOS LA TABLA PRODUCTO , LA CUAL REFERENCIA A MARCA Y CATEGORIA
 CREATE TABLE Producto (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    codigoBarra VARCHAR(50),
+    nombre VARCHAR(MAX) NOT NULL,
+    codigoBarra VARCHAR(MAX),
     descripcion VARCHAR(MAX),
-    tipoPrecio VARCHAR(10) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
+    tipoPrecio VARCHAR(MAX) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
     precioPor MONEY CHECK (precioPor >= 0),
     esExentoIVA BIT NOT NULL,
     categoriald INT,
@@ -121,8 +121,8 @@ CREATE TABLE ProductoRecomendadoParaCliente (
 -- CREAMOS LA TABLA TIPO DE ENVIO
 CREATE TABLE TipoEnvio (
     id INT PRIMARY KEY,
-    nombreEnvio VARCHAR(50) NOT NULL,
-    tiempoEstimadoEntrega INT CHECK ( tiempoEstimadoEntrega BETWEEN 0 AND 23),
+    nombreEnvio VARCHAR(MAX) NOT NULL,
+    tiempoEstimadoEntrega INT,
     costoEnvio MONEY CHECK (costoEnvio >= 0)
 );
 
@@ -131,7 +131,7 @@ CREATE TABLE HistorialClienteProducto (
     clienteId INT,
     productoId INT,
     fecha DATE,
-    tipoAccion VARCHAR(15) CHECK (tipoAccion IN ('Busqueda', 'Carrito', 'Compra')),
+    tipoAccion VARCHAR(MAX) CHECK (tipoAccion IN ('Busqueda', 'Carrito', 'Compra')),
     PRIMARY KEY (clienteId, productoId, fecha),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -152,7 +152,7 @@ CREATE TABLE Carrito (
 -- CREAMOS LA TABLA FORMA DE PAGO
 CREATE TABLE FormaPago (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     descripcion VARCHAR(MAX)
 );
 
@@ -217,13 +217,13 @@ CREATE TABLE OrdenDetalle (
 -- CREAMOS LA TABLA PAIS
 CREATE TABLE Pais (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL
+    nombre VARCHAR(MAX) NOT NULL
 );
 
 -- CREAMOS LA TABLA ESTADO, LA CUAL REFERENCIA A PAIS
 CREATE TABLE Estado (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     paisId INT,
     FOREIGN KEY (paisId) REFERENCES Pais(id)
 );
@@ -231,7 +231,7 @@ CREATE TABLE Estado (
 -- CREAMOS LA TABLA CIUDAD, LA CUAL REFERENCIA A ESTADO
 CREATE TABLE Ciudad (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     estadoId INT,
     FOREIGN KEY (estadoId) REFERENCES Estado(id)
 );
@@ -239,14 +239,14 @@ CREATE TABLE Ciudad (
 -- CREAMOS LA TABLA PROMO
 CREATE TABLE Promo (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    slogan VARCHAR(255),
+    nombre VARCHAR(MAX) NOT NULL,
+    slogan VARCHAR(MAX),
     codigo INT,
-    tipoDescuento VARCHAR(10) CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
+    tipoDescuento VARCHAR(MAX) CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
     valorDescuento MONEY CHECK (valorDescuento >= 0),
     fechaInicio DATE,
     fechaFin DATE,
-    tipoPromocion VARCHAR(10) CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos'))
+    tipoPromocion VARCHAR(MAX) CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos'))
 );
 
 -- CREAMOS LA TABLA PROMO ESPECIALIZADA, LA CUAL REFERENCIA A PROMO, PRODUCTO, CATEGORIA Y MARCA
@@ -274,9 +274,9 @@ CREATE TABLE FacturaPromo (
 -- CREAMOS LA TABLA SUCURSAL, LA CUAL REFERENCIA A CIUDAD
 CREATE TABLE Sucursal (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
-    direccion VARCHAR(255),
-    telefono VARCHAR(20),
+    nombre VARCHAR(MAX) NOT NULL,
+    direccion VARCHAR(MAX),
+    telefono VARCHAR(MAX),
     horaAbrir INT CHECK (horaAbrir BETWEEN 0 AND 23 ),
     horaCerrar INT CHECK (horaCerrar BETWEEN 0 AND 23),
     ciudadId INT,
@@ -286,7 +286,7 @@ CREATE TABLE Sucursal (
 -- CREAMOS LA TABLA CARGO
 CREATE TABLE Cargo (
     id INT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
     descripcion VARCHAR(MAX),
     salarioBasePorHora MONEY CHECK (salarioBasePorHora >= 0)
 );
@@ -295,10 +295,10 @@ CREATE TABLE Cargo (
 CREATE TABLE Empleado (
     id INT PRIMARY KEY,
     CI INT,
-    nombre VARCHAR(100) NOT NULL,
-    apellido VARCHAR(100) NOT NULL,
+    nombre VARCHAR(MAX) NOT NULL,
+    apellido VARCHAR(MAX) NOT NULL,
     sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
-    direccionCorta VARCHAR(255),
+    direccionCorta VARCHAR(MAX),
     cargoId INT,
     empleadoSupervisorId INT,
     sucursalId INT,
@@ -323,11 +323,11 @@ CREATE TABLE Inventario (
 -- CREAMOS LA TABLA PROVEEDOR LA CUAL REFERENCIA A CIUDAD
 CREATE TABLE Proveedor (
     id INT PRIMARY KEY,
-    RIF VARCHAR(20),
-    nombre VARCHAR(100) NOT NULL,
-    contacto VARCHAR(100) NOT NULL,
-    telefono VARCHAR(20),
-    correo VARCHAR(100),
+    RIF VARCHAR(MAX),
+    nombre VARCHAR(MAX) NOT NULL,
+    contacto VARCHAR(MAX) NOT NULL,
+    telefono VARCHAR(MAX),
+    correo VARCHAR(MAX),
     ciudadId INT,
     FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
 );
