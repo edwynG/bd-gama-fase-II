@@ -315,7 +315,7 @@ CREATE TABLE Empleado (
 -- CREAMOS LA TABLA INVENTARIO, LA CUAL REFERENCIA A PRODUCTO
 CREATE TABLE Inventario (
     id INT PRIMARY KEY,
-    productoId INT,
+    productoId INT UNIQUE,
     cantidad INT CHECK (cantidad >= 0),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
