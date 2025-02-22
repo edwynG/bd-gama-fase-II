@@ -72,3 +72,21 @@ FROM
             SUM(ProductoPorPrecio.cantidad) DESC
     ) as ProductosMasVendidos
     JOIN Producto p2 ON p2.id = ProductosMasVendidos.productoId;
+
+--- Consulta J
+SELECT
+    p.nombre,
+    p.precioPor,
+    (p.precioPor - (p.precioPor * 0.1)) as precioConDescuento,
+    CASE
+        WHEN i.cantidad < 10 THEN 'Últimos disponibles'
+        WHEN i.cantidad < 20 THEN 'Pocos disponibles'
+        ELSE 'Disponible'
+    END as stock
+FROM
+    Producto p
+    -- El productoId en Inventario es una FK, pero no se repetira porque la relación se maneja de forma global para saber el stock de cada producto
+    JOIN Inventario i ON i.productoId = p.id
+    JOIN Categoria c ON c.id = i.productoId
+WHERE
+    c.nombre = 'Chucherias';
