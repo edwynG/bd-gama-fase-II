@@ -14,24 +14,26 @@
  */
 SELECT
   DISTINCT e.CI,
-  e.nombre || ' ' || e.apellido AS nombreCompleto,
+  e.nombre + ' ' + e.apellido AS nombreCompleto,
   e.sexo,
   c.nombre AS nombreCargo,
   c.salarioBasePorHora AS salarioBasePorHora,
   COALESCE(e.bonoFijoMensual, 0) AS bonoFijoMensual,
-  (c.salarioBasePorHora * e.cantidadDiasTrabajoPorSemana * 4 * (e.horaFin - e.horaInicio)) + (COALESCE(e.bonoFijoMensual, 0)) AS totalMensual, 
+  (c.salarioBasePorHora * e.cantidadDiasTrabajoPorSemana * 4 * (e.horaFin - e.horaInicio)) + COALESCE(e.bonoFijoMensual, 0) AS totalMensual, 
   --Se suma el SalarioHora * Dias trabajados * 4 para tener el mes * cantidad de Horas todo eso + el bono fijo mensual nos daria el monto total ganado durante el mes
-  (c.salarioBasePorHora * e.cantidadDiasTrabajoPorSemana * (e.horaFin - e.horaInicio) * (CAST((JULIANDAY(DATE('now')) - JULIANDAY(DATE(e.fechaContrato)))/7 AS INTEGER))) +
-  (COALESCE(e.bonoFijoMensual, 0) * ((EXTRACT(year FROM AGE(NOW(), e.fechaContrato)) * 12) + (EXTRACT(month FROM AGE(NOW(), e.fechaContrato))))) AS montoTotalRecibido
+  (c.salarioBasePorHora *  (e.horaFin - e.horaInicio) * e.cantidadDiasTrabajoPorSemana * (DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7)) + 
+  (COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF(year, e.fechaContrato, GETDATE()) * 12 + (DATEDIFF(month, e.fechaContrato, GETDATE()) % 12))) AS montoTotalRecibido
   /*
-  (CAST((JULIANDAY(DATE('now')) - JULIANDAY(DATE(e.fechaContrato)))/7 AS INTEGER)): Esto es la cantidad de semanas que llevo trabajando desde que se inicio el contrato. se multiplica por la cantidad de dias
+  (DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7): Esto es la cantidad de semanas que llevo trabajando desde que se inicio el contrato. se multiplica por la cantidad de dias
   trabajados por semana y este resultado por la cantidad de horas trabajadas por dia, asi obtenemos el total de su sueldo base ganado por horas trabajadas desde que empezo el contrato.
-  (COALESCE(e.bonoFijoMensual, 0) * ((EXTRACT(year FROM AGE(NOW(), e.fechaContrato)) * 12) + (EXTRACT(month FROM AGE(NOW(), e.fechaContrato))))): Con esto obtenemos la cantidad total de bonos mensuales
+  (COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF(year, e.fechaContrato, GETDATE()) * 12 + (DATEDIFF(month, e.fechaContrato, GETDATE()) % 12))): Con esto obtenemos la cantidad total de bonos mensuales
   obtenidos desde que empezo el contrato.
   */
-  FROM Empleado e
-  JOIN Cargo c ON e.cargoId = c.id
-  LEFT JOIN
+FROM
+    Empleado e
+JOIN
+    Cargo c ON e.cargoId = c.id
+LEFT JOIN
     (SELECT empleadoId, COUNT(DISTINCT sucursalId) AS sucursalesDistintas
      FROM VentaFisica
      GROUP BY empleadoId) sv ON e.id = sv.empleadoId
@@ -44,8 +46,7 @@ SELECT
                 JOIN Empleado e2 ON e1.empleadoSupervisorId = e2.id
                 WHERE e1.sucursalId = e2.sucursalId)
     -- Verificamos si el empleado esta en una lista de empleados cuyos supervisores trabajan en la misma sucursal que el.
-    OR e.cargoId IN (SELECT id
+    OR e.cargoId IN (SELECT TOP 5 id
                      FROM Cargo
-                     ORDER BY salarioBasePorHora DESC
-                     LIMIT 5);
+                     ORDER BY salarioBasePorHora DESC);
     -- Obtenemos una lista de los 5 mejores salarios por cargo y verificamos que el Id Cargo de nuestro empleado este dentro de dicha lista.
