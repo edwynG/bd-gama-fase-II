@@ -21,8 +21,8 @@ SELECT
   COALESCE(e.bonoFijoMensual, 0) AS bonoFijoMensual,
   (c.salarioBasePorHora * e.cantidadDiasTrabajoPorSemana * 4 * (e.horaFin - e.horaInicio)) + COALESCE(e.bonoFijoMensual, 0) AS totalMensual, 
   --Se suma el SalarioHora * Dias trabajados * 4 para tener el mes * cantidad de Horas todo eso + el bono fijo mensual nos daria el monto total ganado durante el mes
-  (c.salarioBasePorHora *  (e.horaFin - e.horaInicio) * e.cantidadDiasTrabajoPorSemana * (DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7)) + 
-  (COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF(year, e.fechaContrato, GETDATE()) * 12 + (DATEDIFF(month, e.fechaContrato, GETDATE()) % 12))) AS montoTotalRecibido
+  (c.salarioBasePorHora *  (e.horaFin - e.horaInicio) * e.cantidadDiasTrabajoPorSemana * (DATEDIFF("day", CONVERT("date", e.fechaContrato), CONVERT("date", GETDATE())) / 7)) + 
+  (COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF("year", e.fechaContrato, GETDATE()) * 12 + (DATEDIFF("month", e.fechaContrato, GETDATE()) % 12))) AS montoTotalRecibido
   /*
   (DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7): Esto es la cantidad de semanas que llevo trabajando desde que se inicio el contrato. se multiplica por la cantidad de dias
   trabajados por semana y este resultado por la cantidad de horas trabajadas por dia, asi obtenemos el total de su sueldo base ganado por horas trabajadas desde que empezo el contrato.
