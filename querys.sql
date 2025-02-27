@@ -43,7 +43,7 @@ FROM
                             OrdenOnline oo3
                             JOIN OrdenDetalle od ON od.ordenId = oo3.id
                             JOIN Producto p ON p.id = od.productoId
-                            JOIN Marca m ON m.id = p.categoriald
+                            JOIN Marca m ON m.id = p.categoriaId
                         WHERE
                             m.nombre = 'Electrónica'
                         GROUP BY
@@ -56,7 +56,7 @@ FROM
                             OrdenOnline oo4
                             JOIN OrdenDetalle od1 ON od1.ordenId = oo4.id
                             JOIN Producto p1 ON p1.id = od1.productoId
-                            JOIN Marca m1 ON m1.id = p1.categoriald
+                            JOIN Marca m1 ON m1.id = p1.categoriaId
                         WHERE
                             m1.nombre = 'Hogar'
                         GROUP BY
