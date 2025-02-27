@@ -91,31 +91,31 @@ CREATE TABLE Producto (
     tipoPrecio VARCHAR(MAX) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
     precioPor MONEY CHECK (precioPor >= 0),
     esExentoIVA BIT NOT NULL,
-    categoriald INT,
-    marcald INT,
-    FOREIGN KEY (categoriald) REFERENCES Categoria(id),
-    FOREIGN KEY (marcald) REFERENCES Marca(id)
+    categoriaId INT,
+    marcaId INT,
+    FOREIGN KEY (categoriaId) REFERENCES Categoria(id),
+    FOREIGN KEY (marcaId) REFERENCES Marca(id)
 );
 
 -- CREAMOS LA TABLA PRODUCTORECOMENDADO, LA CUAL REFERENCIA A PRODUCTO
 CREATE TABLE ProductoRecomendadoParaProducto (
     productoId INT,
-    productoRecomendadold INT,
+    productoRecomendadoId INT,
     mensaje VARCHAR(MAX),
-    PRIMARY KEY (productoId, productoRecomendadold),
+    PRIMARY KEY (productoId, productoRecomendadoId),
     FOREIGN KEY (productoId) REFERENCES Producto(id),
-    FOREIGN KEY (productoRecomendadold) REFERENCES Producto(id)
+    FOREIGN KEY (productoRecomendadoId) REFERENCES Producto(id)
 );
 
 -- CREAMOS LA TABLA PRODUCTOPARACLIENTE, LA CUAL REFERENCIA A LOS PRODUCTOS Y A CLIENTES
 CREATE TABLE ProductoRecomendadoParaCliente (
     clienteId INT,
-    productoRecomendadold INT,
+    productoRecomendadoId INT,
     fechaRecomendacion DATE,
     mensaje VARCHAR(MAX),
-    PRIMARY KEY (clienteId, productoRecomendadold, fechaRecomendacion),
+    PRIMARY KEY (clienteId, productoRecomendadoId, fechaRecomendacion),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
-    FOREIGN KEY (productoRecomendadold) REFERENCES Producto(id)
+    FOREIGN KEY (productoRecomendadoId) REFERENCES Producto(id)
 );
 
 -- CREAMOS LA TABLA TIPO DE ENVIO
