@@ -191,7 +191,7 @@ FROM
                     JOIN Pago pg ON pg.facturaId = f2.id
                     JOIN FormaPago fp ON fp.id = pg.metodoPagoId
                 WHERE -- Filtra las ordenes que se han pagado con el metodo de pago 'Tarjeta de Crédito'
-                    fp.nombre = 'Tarjeta de Crédito'
+                    LOWER(fp.nombre) = LOWER('Tarjeta de credito')
                 GROUP BY
                     c3.id
             ) as ClienteCondicion

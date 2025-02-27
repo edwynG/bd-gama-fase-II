@@ -66,7 +66,7 @@ CREATE TABLE Cliente (
     CI  INT,
     nombre VARCHAR(MAX) NOT NULL,
     apellido VARCHAR(MAX) NOT NULL,
-    correo VARCHAR(MAX) NOT NULL,
+    correo VARCHAR(MAX) NOT NULL UNIQUE,
     sexo CHAR(1) CHECK (sexo IN ('M', 'F')),
     fechaNacimiento DATE,
     fechaRegistro DATE NOT NULL
