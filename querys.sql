@@ -1,7 +1,7 @@
 -- Parte II
 --- Consulta D
-SELECT DISTINCT
-    e.CI,
+SELECT
+    DISTINCT e.CI,
     e.nombre + ' ' + e.apellido AS nombreCompleto,
     e.sexo,
     c.nombre AS nombreCargo,
@@ -26,8 +26,11 @@ SELECT DISTINCT
     ) + (
         COALESCE(e.bonoFijoMensual, 0) * DATEDIFF (MONTH, e.fechaContrato, GETDATE ())
     ) AS montoTotalRecibido --Se suma el SalarioHora * Dias trabajados * 4 para tener el mes * cantidad de Horas todo eso + el bono fijo mensual nos daria el monto total ganado durante el mes
-    /*(DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7): Esto es la cantidad de semanas que llevo trabajando desde que se inicio el contrato. se multiplica por la cantidad de dias trabajados por semana y este resultado por la cantidad de horas trabajadas por dia, asi obtenemos el total de su sueldo base ganado por horas trabajadas desde que empezo el contrato.*/
-    /*(COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF(year, e.fechaContrato, GETDATE()) * 12 + (DATEDIFF(month, e.fechaContrato, GETDATE()) % 12))): Con esto obtenemos la cantidad total de bonos mensuales obtenidos desde que empezo el contrato.
+    /*(DATEDIFF(day, CONVERT(DATE, e.fechaContrato), CONVERT(DATE, GETDATE())) / 7): Esto es la cantidad de semanas que llevo trabajando desde que se inicio el contrato. 
+     Se multiplica por la cantidad de dias trabajados por semana y este resultado por la cantidad de horas trabajadas por dia, 
+     asi obtenemos el total de su sueldo base ganado por horas trabajadas desde que empezo el contrato.*/
+    /*(COALESCE(e.bonoFijoMensual, 0) * (DATEDIFF(year, e.fechaContrato, GETDATE()) * 12 + (DATEDIFF(month, e.fechaContrato, GETDATE()) % 12))): 
+     Con esto obtenemos la cantidad total de bonos mensuales obtenidos desde que empezo el contrato.
      */
 FROM
     Empleado e
@@ -111,24 +114,24 @@ FROM
     JOIN Producto p2 ON p2.id = Temp.productoId
     LEFT JOIN Promo pr2 ON pr2.id = Temp.promoId
     /*Consideramos que no tiene sentido que hayan varias PromoEspecializada con la misma tupla (PromoId, ProductoId). Ya que esto indica que la promo se aplica aun producto en especifico,
-    si se repite consideramos que habria un problema de redundancia*/
+     si se repite consideramos que habria un problema de redundancia*/
     LEFT JOIN PromoEspecializada pe2 ON pe2.promoId = Temp.promoId
-    AND pe2.productoId = Temp.productoId
-
--- Parte III
---- Consulta G
+    AND pe2.productoId = Temp.productoId -- Parte III
+    --- Consulta G
 SELECT
     c.*,
     Temp.totalOrdenes,
     Temp.totalDineroGastado
 FROM
-    ( -- Tabla temporal donde se calculan los datos indicados por cliente
+    (
+        -- Tabla temporal donde se calculan los datos indicados por cliente
         SELECT
             oo.clienteId,
             COUNT(oo.id) as totalOrdenes,
             SUM(f.montoTotal) as totalDineroGastado
         FROM
-            ( -- Clientes que satisfacen las 3 restricciones
+            (
+                -- Clientes que satisfacen las 3 restricciones
                 -- Condición 1
                 -- Consulta clientes que realizado compras en al menos 3 órdenes distintas en los últimos 6 meses.
                 SELECT
@@ -136,11 +139,13 @@ FROM
                 FROM
                     Cliente c1
                     JOIN OrdenOnline oo1 ON oo1.clienteId = c1.id
-                WHERE -- Filtra ordenes hechas en los ultimos 6 meses
+                WHERE
+                    -- Filtra ordenes hechas en los ultimos 6 meses
                     oo1.fechaCreacion >= CONVERT(DATE, DATEADD (MONTH, -6, GETDATE ()))
                 GROUP BY
                     c1.id
-                HAVING -- Filtra los clientess que han realizado al menos 3 compras distintas
+                HAVING
+                    -- Filtra los clientess que han realizado al menos 3 compras distintas
                     COUNT(DISTINCT (oo1.id)) >= 3
                 INTERSECT
                 --- Condicion 2
@@ -150,7 +155,8 @@ FROM
                 FROM
                     Cliente c2
                     JOIN OrdenOnline oo2 ON oo2.clienteId = c2.id
-                WHERE -- Filtro clientes que han comprado al menos un producto de categoria 'Electrónica' y "Hogar" en una misma orden
+                WHERE
+                    -- Filtro clientes que han comprado al menos un producto de categoria 'Electrónica' y "Hogar" en una misma orden
                     oo2.id in (
                         --- Consulto ordenes donde se hayan comprado al menos un producto de categoria 'Electrónica'
                         SELECT
@@ -164,7 +170,8 @@ FROM
                             m.nombre = 'Electrónica'
                         GROUP BY
                             oo3.id
-                        INTERSECT -- Solo se quedaran las ordenes donde se hayan comparado al menos un producto de categoria 'Electrónica' y "Hogar"
+                        INTERSECT
+                        -- Solo se quedaran las ordenes donde se hayan comparado al menos un producto de categoria 'Electrónica' y "Hogar"
                         --- Consulto ordenes donde se hayan comprado al menos un producto de categoria 'Hogar'
                         SELECT
                             oo4.id
@@ -191,7 +198,8 @@ FROM
                     JOIN Factura f2 ON f2.id = oo5.facturaId
                     JOIN Pago pg ON pg.facturaId = f2.id
                     JOIN FormaPago fp ON fp.id = pg.metodoPagoId
-                WHERE -- Filtra las ordenes que se han pagado con el metodo de pago 'Tarjeta de Crédito'
+                WHERE
+                    -- Filtra las ordenes que se han pagado con el metodo de pago 'Tarjeta de Crédito'
                     fp.nombre = 'Tarjeta de Crédito'
                 GROUP BY
                     c3.id
@@ -230,8 +238,7 @@ FROM
         GROUP BY
             f.clienteId
     ) as PrimeraCompara
-    JOIN Factura f2 ON f2.clienteId = PrimeraCompara.clienteId
-    -- Filtra los registros donde la fecha de la 2da compra esta entre 1 y 30 dias despues de la 1er compra
+    JOIN Factura f2 ON f2.clienteId = PrimeraCompara.clienteId -- Filtra los registros donde la fecha de la 2da compra esta entre 1 y 30 dias despues de la 1er compra
 WHERE
     f2.fechaEmision > PrimeraCompara.fecha
     AND f2.fechaEmision <= DATEADD (DAY, 30, PrimeraCompara.fecha)
@@ -243,10 +250,12 @@ SELECT
     p2.*,
     ContribucionProcentaje
 FROM
-    ( -- Los 10 productos mas vendidos
+    (
+        -- Los 10 productos mas vendidos
         SELECT
             TOP 10 ProductoPorPrecio.productoId as productoId,
-            ( -- Ingreso total por porducto
+            (
+                -- Ingreso total por porducto
                 SUM(ProductoPorPrecio.ingresoPor) / (
                     -- total de ingresos en general
                     SELECT
@@ -287,8 +296,7 @@ SELECT
         ELSE 'Disponible'
     END as stock
 FROM
-    Producto p
-    -- El productoId en Inventario es una FK, pero no se repetira porque la relación se maneja de forma global para saber el stock de cada producto
+    Producto p -- El productoId en Inventario es una FK, pero no se repetira porque la relación se maneja de forma global para saber el stock de cada producto
     JOIN Inventario i ON i.productoId = p.id
     JOIN Categoria c ON c.id = i.productoId
 WHERE
