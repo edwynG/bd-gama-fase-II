@@ -110,7 +110,8 @@ FROM
     ) as Temp
     JOIN Producto p2 ON p2.id = Temp.productoId
     LEFT JOIN Promo pr2 ON pr2.id = Temp.promoId
-    -- Consideramos que no tiene sentido que hayan varias PromoEspecializada con la misma tupla (PromoId, ProductoId). Ya que esto indica que la promo se aplica aun producto en especifico, si se repite consideramos que habria un problema de redundancia
+    /*Consideramos que no tiene sentido que hayan varias PromoEspecializada con la misma tupla (PromoId, ProductoId). Ya que esto indica que la promo se aplica aun producto en especifico,
+    si se repite consideramos que habria un problema de redundancia*/
     LEFT JOIN PromoEspecializada pe2 ON pe2.promoId = Temp.promoId
     AND pe2.productoId = Temp.productoId
 
