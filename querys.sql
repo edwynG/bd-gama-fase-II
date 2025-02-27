@@ -1,3 +1,4 @@
+-- Parte I
 -- Parte II
 --- Consulta D
 SELECT DISTINCT
