@@ -1,7 +1,7 @@
--- Consultas
--- CONSULTA D
-SELECT
-    DISTINCT e.CI,
+-- Parte II
+--- Consulta D
+SELECT DISTINCT
+    e.CI,
     e.nombre + ' ' + e.apellido AS nombreCompleto,
     e.sexo,
     c.nombre AS nombreCargo,
@@ -79,26 +79,37 @@ WHERE
             salarioBasePorHora DESC
     );
 
---CONSULTA F
-
+--- Consulta F
 SELECT
-    p.nombre AS Producto,
-    COALESCE(pr.nombre, 'Sin Promo') AS Promocion,
-    COALESCE(pe.id, 'Sin Promo Especializada') AS PromocionEspecializada
+    p2.*,
+    pr2.*,
+    pe2.*
 FROM
-    Producto p
-    JOIN Marca m ON m.id = p.marcaId 
-    JOIN HistorialClienteProducto hcp ON hcp.productoId = p.id
-    JOIN FacturaDetalle fd ON fd.productoId = p.id
-    JOIN Factura f ON f.id = fd.facturaId
-    JOIN FacturaPromo fp ON fp.facturaId = f.id
-    LEFT JOIN Promo pr ON pr.id = fp.promoId
-    LEFT JOIN PromoEspecializada pe ON pe.productoId = p.id
-    AND pe.promoId = pr.id
-    --Hacemos left Join porque nos piden los productos que tengan o no promo, y que tengan o no promo especializada.
-WHERE
-    m.nombre = 'Gama'
-    AND hcp.tipoAccion = 'Compra'
-    AND DATEPART(MONTH, hcp.fecha) IN (6, 8)
-	AND (pr.nombre IS NULL OR LOWER(pr.nombre) = 'verano en gama');
-	-- Esta parte me filtra los productos que no tengan promo y en caso de tenerla tiene que ser igual a "verano en gama"
+    (
+        -- Tabla donde se obtinen los productos vendidos en los meses de rebaja(junio y agosto), seguido de su promo 'verano en gamma' si es que la tiene
+        SELECT
+            p.id as productoId,
+            pe.promoId as PromoId
+        FROM
+            Producto p
+            JOIN Marca m ON m.id = p.marcaId
+            JOIN HistorialClienteProducto hcp ON hcp.productoId = p.id
+            LEFT JOIN PromoEspecializada pe ON pe.productoId = p.id
+            LEFT JOIN Promo pr ON pr.id = pe.promoId
+        WHERE
+            hcp.tipoAccion = 'Compra'
+            AND DATEPART (MONTH, hcp.fecha) IN (6, 8)
+            AND m.nombre = 'Gama'
+            AND (
+                pr.id IS NULL
+                OR LOWER(pr.nombre) = LOWER('Verano EN GaMa')
+            )
+        GROUP BY
+            p.id,
+            pe.promoId
+    ) as Temp
+    JOIN Producto p2 ON p2.id = Temp.productoId
+    LEFT JOIN Promo pr2 ON pr2.id = Temp.promoId
+    -- Consideramos que no tiene sentido que hayan varias PromoEspecializada con la misma tupla (PromoId, ProductoId). Ya que esto indica que la promo se aplica aun producto en especifico, si se repite consideramos que habria un problema de redundancia
+    LEFT JOIN PromoEspecializada pe2 ON pe2.promoId = Temp.promoId
+    AND pe2.productoId = Temp.productoId
