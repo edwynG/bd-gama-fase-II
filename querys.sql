@@ -99,7 +99,7 @@ FROM
         WHERE
             hcp.tipoAccion = 'Compra'
             AND DATEPART (MONTH, hcp.fecha) IN (6, 8)
-            AND m.nombre = 'Gama'
+            AND LOWER(m.nombre) = LOWER('Gama')
             AND (
                 pr.id IS NULL
                 OR LOWER(pr.nombre) = LOWER('Verano EN GaMa')
