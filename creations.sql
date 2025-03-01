@@ -1,51 +1,75 @@
 -- Creacion de tablas
-
 -- Este script de SQL Server es para eliminar todas las restricciones de clave foráneas de las tablas para poder eliminarlas si existen
 -- Este algoritmo es solo para usarlo en desarrollo, por lo que no estoy seguro si podemos enviar el proyecto junto con este script, en caso de que no se pueda, simplemente se eliminara antes de enviarlo.
-
 -- NOTA: La utilidad de este script, es para poder aplicar cambios a las tablas sin tener que eliminarlas manualmente y crearlas de nuevo.
-
 -- Inicia script
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id)) + 
-                ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
-FROM sys.foreign_keys
-
-EXEC sp_executesql @sql;
+SELECT
+    @sql + = 'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id)) + ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+FROM
+    sys.foreign_keys EXEC sp_executesql @sql;
 
 -- En caso de que existan las tablas se eliminan
 DROP TABLE IF EXISTS Marca;
-DROP TABLE IF EXISTS Categoria;
-DROP TABLE IF EXISTS Cliente;
-DROP TABLE IF EXISTS ClienteDireccion;
-DROP TABLE IF EXISTS Producto;
-DROP TABLE IF EXISTS ProductoRecomendadoParaProducto;
-DROP TABLE IF EXISTS ProductoRecomendadoParaCliente;
-DROP TABLE IF EXISTS TipoEnvio;
-DROP TABLE IF EXISTS HistorialClienteProducto;
-DROP TABLE IF EXISTS Carrito;
-DROP TABLE IF EXISTS FormaPago;
-DROP TABLE IF EXISTS Factura;
-DROP TABLE IF EXISTS FacturaDetalle;
-DROP TABLE IF EXISTS Pago;
-DROP TABLE IF EXISTS OrdenOnline;
-DROP TABLE IF EXISTS OrdenDetalle;
-DROP TABLE IF EXISTS Pais;
-DROP TABLE IF EXISTS Estado;
-DROP TABLE IF EXISTS Ciudad;
-DROP TABLE IF EXISTS Promo;
-DROP TABLE IF EXISTS PromoEspecializada;
-DROP TABLE IF EXISTS FacturaPromo;
-DROP TABLE IF EXISTS Sucursal;
-DROP TABLE IF EXISTS Cargo;
-DROP TABLE IF EXISTS Empleado;
-DROP TABLE IF EXISTS Inventario;
-DROP TABLE IF EXISTS Proveedor;
-DROP TABLE IF EXISTS ProveedorProducto;
-DROP TABLE IF EXISTS VentaFisica;
--- fin del script
 
+DROP TABLE IF EXISTS Categoria;
+
+DROP TABLE IF EXISTS Cliente;
+
+DROP TABLE IF EXISTS ClienteDireccion;
+
+DROP TABLE IF EXISTS Producto;
+
+DROP TABLE IF EXISTS ProductoRecomendadoParaProducto;
+
+DROP TABLE IF EXISTS ProductoRecomendadoParaCliente;
+
+DROP TABLE IF EXISTS TipoEnvio;
+
+DROP TABLE IF EXISTS HistorialClienteProducto;
+
+DROP TABLE IF EXISTS Carrito;
+
+DROP TABLE IF EXISTS FormaPago;
+
+DROP TABLE IF EXISTS Factura;
+
+DROP TABLE IF EXISTS FacturaDetalle;
+
+DROP TABLE IF EXISTS Pago;
+
+DROP TABLE IF EXISTS OrdenOnline;
+
+DROP TABLE IF EXISTS OrdenDetalle;
+
+DROP TABLE IF EXISTS Pais;
+
+DROP TABLE IF EXISTS Estado;
+
+DROP TABLE IF EXISTS Ciudad;
+
+DROP TABLE IF EXISTS Promo;
+
+DROP TABLE IF EXISTS PromoEspecializada;
+
+DROP TABLE IF EXISTS FacturaPromo;
+
+DROP TABLE IF EXISTS Sucursal;
+
+DROP TABLE IF EXISTS Cargo;
+
+DROP TABLE IF EXISTS Empleado;
+
+DROP TABLE IF EXISTS Inventario;
+
+DROP TABLE IF EXISTS Proveedor;
+
+DROP TABLE IF EXISTS ProveedorProducto;
+
+DROP TABLE IF EXISTS VentaFisica;
+
+-- fin del script
 -- CREAMOS LA TABLA MARCA
 CREATE TABLE Marca (
     id INT PRIMARY KEY,
@@ -63,7 +87,7 @@ CREATE TABLE Categoria (
 -- CREAMOS LA TABLA CLIENTE
 CREATE TABLE Cliente (
     id INT PRIMARY KEY,
-    CI  INT,
+    CI INT,
     nombre VARCHAR(MAX) NOT NULL,
     apellido VARCHAR(MAX) NOT NULL,
     correo VARCHAR(MAX) NOT NULL,
@@ -113,7 +137,11 @@ CREATE TABLE ProductoRecomendadoParaCliente (
     productoRecomendadoId INT,
     fechaRecomendacion DATE,
     mensaje VARCHAR(MAX),
-    PRIMARY KEY (clienteId, productoRecomendadoId, fechaRecomendacion),
+    PRIMARY KEY (
+        clienteId,
+        productoRecomendadoId,
+        fechaRecomendacion
+    ),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
     FOREIGN KEY (productoRecomendadoId) REFERENCES Producto(id)
 );
@@ -277,8 +305,14 @@ CREATE TABLE Sucursal (
     nombre VARCHAR(MAX) NOT NULL,
     direccion VARCHAR(MAX),
     telefono VARCHAR(MAX),
-    horaAbrir INT CHECK (horaAbrir BETWEEN 0 AND 23 ),
-    horaCerrar INT CHECK (horaCerrar BETWEEN 0 AND 23),
+    horaAbrir INT CHECK (
+        horaAbrir BETWEEN 0
+        AND 23
+    ),
+    horaCerrar INT CHECK (
+        horaCerrar BETWEEN 0
+        AND 23
+    ),
     ciudadId INT,
     FOREIGN KEY (ciudadId) REFERENCES Ciudad(id)
 );
@@ -304,9 +338,18 @@ CREATE TABLE Empleado (
     sucursalId INT,
     fechaContrato DATE,
     bonoFijoMensual MONEY CHECK (bonoFijoMensual >= 0),
-    horaInicio INT CHECK (horaInicio BETWEEN 0 AND 23),
-    horaFin INT CHECK (horaFin BETWEEN 0 AND 23),
-    cantidadDiasTrabajoPorSemana INT CHECK (cantidadDiasTrabajoPorSemana BETWEEN 1 AND 7),
+    horaInicio INT CHECK (
+        horaInicio BETWEEN 0
+        AND 23
+    ),
+    horaFin INT CHECK (
+        horaFin BETWEEN 0
+        AND 23
+    ),
+    cantidadDiasTrabajoPorSemana INT CHECK (
+        cantidadDiasTrabajoPorSemana BETWEEN 1
+        AND 7
+    ),
     FOREIGN KEY (cargoId) REFERENCES Cargo(id),
     FOREIGN KEY (empleadoSupervisorId) REFERENCES Empleado(id),
     FOREIGN KEY (sucursalId) REFERENCES Sucursal(id)
@@ -356,3 +399,93 @@ CREATE TABLE VentaFisica (
 );
 
 -- Implementación de triggers
+-- Trigger C
+-- Al insertar datos en FacturaPromo: llama al verificador de promo válida y acepta el registro o no.
+
+CREATE TRIGGER verificar_promocion ON FacturaPromo INSTEAD OF
+INSERT
+    AS BEGIN DECLARE @promoId INT;
+
+DECLARE @tipoPromocion VARCHAR(50);
+
+DECLARE @tipoCompra VARCHAR(50);
+
+DECLARE @fechaActual DATE = GETDATE();
+
+-- Obtenemos el promoId y tipoCompra del registro que se intenta insertar
+SELECT
+    @promoId = promoId,
+    @tipoCompra = CASE
+        WHEN EXISTS (
+            SELECT
+                1
+            FROM
+                OrdenOnline
+            WHERE
+                facturaId = inserted.facturaId
+        ) THEN 'Online'
+        WHEN EXISTS (
+            SELECT
+                1
+            FROM
+                VentaFisica
+            WHERE
+                facturaId = inserted.facturaId
+        ) THEN 'Física'
+    END
+FROM
+    inserted;
+
+-- Verificamos si la promoción es válida
+SELECT
+    @tipoPromocion = tipoPromocion
+FROM
+    Promo
+WHERE
+    id = @promoId;
+
+IF NOT EXISTS (
+    SELECT
+        1
+    FROM
+        Promo
+    WHERE
+        id = @promoId
+        AND @fechaActual BETWEEN fechaInicio
+        AND fechaFin -- Verificamos que la fecha este en el rango de tiempo de la promocion
+        AND (
+            (
+                @tipoCompra = 'Online'
+                AND (
+                    @tipoPromocion = 'Online'
+                    OR @tipoPromocion = 'Ambos'
+                )
+            )
+            OR (
+                @tipoCompra = 'Física'
+                AND (
+                    @tipoPromocion = 'Física'
+                    OR @tipoPromocion = 'Ambos'
+                )
+            ) -- Verificamos que el tipo de compra sea fisico, online o ambos
+        )
+) BEGIN RAISERROR(
+    'La promoción no es válida para el tipo de compra.',
+    16,
+    1
+);
+
+ROLLBACK TRANSACTION;
+
+END
+ELSE BEGIN -- Si la promoción es válida, insertamos el registro
+INSERT INTO
+    FacturaPromo (facturaId, promoId)
+SELECT
+    facturaId,
+    promoId
+FROM
+    inserted;
+
+END
+END;
