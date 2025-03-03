@@ -59,7 +59,6 @@ INSERT INTO Marca (id, nombre, descripcion) VALUES
 (17, 'Knorr', 'Sopas y condimentos'),
 (18, 'Natura', 'Productos de belleza y cuidado personal'),
 (19, 'Fanta', 'Bebidas gaseosas'),
-(20, 'Sprite', 'Bebidas gaseosas')
 (20, 'Sprite', 'Bebidas gaseosas'),
 (21, 'Red Bull', 'Bebidas energéticas'),
 (22, 'Monster', 'Bebidas energéticas'),
