@@ -197,7 +197,7 @@ CREATE TABLE OrdenOnline (
     nroOrden INT NOT NULL,
     fechaCreacion DATE,
     tipoEnvioId INT,
-    facturaId INT,
+    facturaId INT UNIQUE NULL,
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
     FOREIGN KEY (tipoEnvioId) REFERENCES TipoEnvio(id),
     FOREIGN KEY (facturaId) REFERENCES Factura(id)
