@@ -59,7 +59,28 @@ INSERT INTO Marca (id, nombre, descripcion) VALUES
 (17, 'Knorr', 'Sopas y condimentos'),
 (18, 'Natura', 'Productos de belleza y cuidado personal'),
 (19, 'Fanta', 'Bebidas gaseosas'),
-(20, 'Sprite', 'Bebidas gaseosas');
+(20, 'Sprite', 'Bebidas gaseosas')
+(20, 'Sprite', 'Bebidas gaseosas'),
+(21, 'Red Bull', 'Bebidas energéticas'),
+(22, 'Monster', 'Bebidas energéticas'),
+(23, 'Starbucks', 'Cafés y bebidas especiales'),
+(24, 'Nescafé', 'Café instantáneo y soluble'),
+(25, 'Tropicana', 'Jugos y bebidas naturales'),
+(26, 'Gatorade', 'Bebidas deportivas'),
+(27, 'Oreo', 'Galletas y snacks'),
+(28, 'Cadbury', 'Chocolate y dulces'),
+(29, 'Pillsbury', 'Mezclas para hornear y productos de panadería'),
+(30, 'Dove', 'Productos de cuidado personal y belleza'),
+(31, 'L Oreal', 'Productos de cosmética y cuidado del cabello'),
+(32, 'Nestle', 'Productos alimenticios'),
+(33, 'Delicius', 'Comida para el hogar'),
+(34, 'GanadoGas', 'Ganaderia de buena calidad'),
+(35, 'Under Armour', 'Bebidas alcoholicas'),
+(36, 'Haagen-Dazs', 'Helados y postres'),
+(37, 'Saludela', 'Comida y producatos saludables'),
+(38, 'Chips Ahoy!', 'Galletas y snacks'),
+(39, 'Pasta de diente Sensodyne', 'Productos de higiene bucal'),
+(40, 'Gama', 'Productos para el hogar');
 
 -- Categoria
 INSERT INTO Categoria (id, nombre, descripcion) VALUES
