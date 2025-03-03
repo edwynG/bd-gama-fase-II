@@ -461,10 +461,10 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT;
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor DECIMAL(10, 2);
 
     -- Obtener los valores de la fila insertada
-    SELECT @ordenId = ordenId, @productoId = productold, @cantidad = cantidad FROM inserted;
+    SELECT @ordenId = ordenId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
 
     -- Verificar el inventario general para OrdenOnline
     SELECT @stockDisponible = cantidad
@@ -486,8 +486,8 @@ BEGIN
     END
 
     -- Si hay stock suficiente, insertar el registro
-    INSERT INTO OrdenDetalle (ordenId, productold, cantidad, precioPor)
-    VALUES (@ordenId, @productoId, @cantidad, (SELECT precioPor FROM inserted));
+    INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
+    VALUES (@ordenId, @productoId, @cantidad, @precioPor);
 END;
 
 --Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica).
@@ -497,20 +497,15 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @sucursalId INT, @stockDisponible INT, @facturaId INT;
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor DECIMAL(10, 2);
 
     -- Obtener los valores de la fila insertada
-    SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad FROM inserted;
+    SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
 
-    -- Obtener la sucursalId desde la tabla VentaFisica
-    SELECT @sucursalId = sucursalId
-    FROM VentaFisica
-    WHERE facturaId = @facturaId;
-
-    -- Verificar el inventario específico de la sucursal
+    -- Verificar el inventario del producto que se quiere insertar a la factura
     SELECT @stockDisponible = cantidad
     FROM Inventario
-    WHERE productoId = @productoId AND sucursalId = @sucursalId;
+    WHERE productoId = @productoId;
 
     -- Validar stock
     IF @stockDisponible IS NULL OR @stockDisponible = 0
@@ -528,5 +523,5 @@ BEGIN
 
     -- Si hay stock suficiente, insertar el registro
     INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
-    VALUES (@facturaId, @productoId, @cantidad, (SELECT precioPor FROM inserted));
+    VALUES (@facturaId, @productoId, @cantidad, @precioPor);
 END;
