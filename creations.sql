@@ -356,3 +356,16 @@ CREATE TABLE VentaFisica (
 );
 
 -- Implementación de triggers
+--- Parte I
+-- Trigger B
+CREATE TRIGGER updatePriceProduct
+ON ProveedorProducto
+AFTER INSERT
+AS
+BEGIN
+    -- Actualizar el precio del producto en la tabla Producto
+    UPDATE p
+    SET p.precioPor =  i.precioPor + (i.precioPor * 0.30)  -- Aumentar el precio de compra en un 30%
+    FROM Producto p
+    JOIN inserted i ON p.id = i.productoId;  -- Solo actualizar los productos que fueron comprados
+END;
