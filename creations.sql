@@ -409,135 +409,124 @@ ON FacturaPromo
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Verificar si hay filas que se están insertando
-    IF @@ROWCOUNT > 0
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @facturaId INT, @promoId INT, @tipoPromocion VARCHAR(50), @tipoCompra VARCHAR(50), @fechaActual DATE;
+
+    -- Obtener los valores de la fila insertada
+    SELECT @facturaId = facturaId, @promoId = promoId FROM inserted;
+
+    -- Inicializar la fecha actual
+    SET @fechaActual = GETDATE();
+
+    -- Determinar el tipo de compra
+    SELECT @tipoCompra =
+        CASE
+            WHEN EXISTS (SELECT 1 FROM OrdenOnline WHERE facturaId = @facturaId) THEN 'Online'
+            WHEN EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId) THEN 'Física'
+            ELSE NULL  -- Manejar el caso en que no se encuentra en ninguna tabla
+        END;
+
+    -- Verificar si la promoción es válida y obtener el tipo de promoción en una sola consulta
+    SELECT @tipoPromocion = tipoPromocion
+    FROM Promo
+    WHERE id = @promoId
+      AND @fechaActual BETWEEN fechaInicio AND fechaFin
+      AND (
+          (@tipoCompra = 'Online' AND (tipoPromocion = 'Online' OR tipoPromocion = 'Ambos')) OR
+          (@tipoCompra = 'Física' AND (tipoPromocion = 'Física' OR tipoPromocion = 'Ambos'))
+      );
+
+    -- Si la promoción no es válida, lanzar un error y cancelar la inserción
+    IF @tipoPromocion IS NULL
     BEGIN
-        -- Declarar un cursor para iterar sobre las filas insertadas
-        DECLARE cursor_facturas_promos CURSOR FOR
-        SELECT facturaId, promoId
-        FROM inserted;
-
-        -- Declarar variables para almacenar los valores de cada fila
-        DECLARE @facturaId INT, @promoId INT, @tipoPromocion VARCHAR(50), @tipoCompra VARCHAR(50), @fechaActual DATE;
-
-        -- Abrir el cursor
-        OPEN cursor_facturas_promos;
-
-        -- Leer la primera fila
-        FETCH NEXT FROM cursor_facturas_promos INTO @facturaId, @promoId;
-
-        -- Iterar sobre las filas
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            -- Inicializar la fecha actual
-            SET @fechaActual = GETDATE();
-
-            -- Determinar el tipo de compra
-            SELECT @tipoCompra =
-                CASE
-                    WHEN EXISTS (SELECT 1 FROM OrdenOnline WHERE facturaId = @facturaId) THEN 'Online'
-                    WHEN EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId) THEN 'Física'
-                    ELSE NULL  -- Manejar el caso en que no se encuentra en ninguna tabla
-                END;
-
-            -- Verificar si la promoción es válida y obtener el tipo de promoción en una sola consulta
-            SELECT @tipoPromocion = tipoPromocion
-            FROM Promo
-            WHERE id = @promoId
-              AND @fechaActual BETWEEN fechaInicio AND fechaFin
-              AND (
-                  (@tipoCompra = 'Online' AND (tipoPromocion = 'Online' OR tipoPromocion = 'Ambos')) OR
-                  (@tipoCompra = 'Física' AND (tipoPromocion = 'Física' OR tipoPromocion = 'Ambos'))
-              );
-
-            -- Si la promoción no es válida, lanzar un error y cancelar la inserción
-            IF @tipoPromocion IS NULL
-            BEGIN
-                RAISERROR('La promoción no es válida para el tipo de compra.', 16, 1);
-                ROLLBACK TRANSACTION;
-                CLOSE cursor_facturas_promos;
-                DEALLOCATE cursor_facturas_promos;
-                RETURN;
-            END
-            ELSE
-            BEGIN
-                -- Si la promoción es válida, insertar el registro
-                INSERT INTO FacturaPromo (facturaId, promoId)
-                VALUES (@facturaId, @promoId);
-            END
-
-            -- Leer la siguiente fila
-            FETCH NEXT FROM cursor_facturas_promos INTO @facturaId, @promoId;
-        END
-
-        -- Cerrar y liberar el cursor
-        CLOSE cursor_facturas_promos;
-        DEALLOCATE cursor_facturas_promos;
+        RAISERROR('La promoción no es válida para el tipo de compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    ELSE
+    BEGIN
+        -- Si la promoción es válida, insertar el registro
+        INSERT INTO FacturaPromo (facturaId, promoId)
+        VALUES (@facturaId, @promoId);
     END
 END;
-GO
 
--- Triger D
+-- TRIGGER D
+-- Verificar cantidad de Stock para OrdenOnline y para VentaFisica
 
+-- Trigger encargado de verificar Stock para OrdenDetalle(OrdenOnline).
 CREATE TRIGGER TR_OrdenDetalle_ValidarStock
 ON OrdenDetalle
-BEFORE INSERT
+INSTEAD OF INSERT
 AS
 BEGIN
-    -- Verificar si hay filas que se están insertando
-    IF @@ROWCOUNT > 0
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT;
+
+    -- Obtener los valores de la fila insertada
+    SELECT @ordenId = ordenId, @productoId = productold, @cantidad = cantidad FROM inserted;
+
+    -- Verificar el inventario general para OrdenOnline
+    SELECT @stockDisponible = cantidad
+    FROM Inventario
+    WHERE productoId = @productoId;
+
+    -- Validar stock
+    IF @stockDisponible IS NULL OR @stockDisponible = 0
     BEGIN
-        -- Declarar un cursor para iterar sobre las filas insertadas
-        DECLARE cursor_orden_detalle CURSOR FOR  -- Nombre del cursor cambiado
-        SELECT productold, cantidad
-        FROM inserted;
-
-        -- Declarar variables para almacenar los valores de cada fila
-        DECLARE @productoId INT, @cantidad INT, @sucursalId INT, @stockDisponible INT;
-
-        -- Abrir el cursor
-        OPEN cursor_orden_detalle;  -- Nombre del cursor cambiado
-
-        -- Leer la primera fila
-        FETCH NEXT FROM cursor_orden_detalle INTO @productoId, @cantidad;  -- Nombre del cursor cambiado
-
-        -- Iterar sobre las filas
-        WHILE @@FETCH_STATUS = 0
-        BEGIN
-            -- Obtener la sucursalId desde la tabla OrdenOnline
-            SELECT @sucursalId = OO.sucursalId
-            FROM OrdenOnline OO
-            WHERE OO.id = (SELECT ordenId FROM inserted);
-
-            -- Verificar la cantidad disponible en el inventario
-            SELECT @stockDisponible = cantidad
-            FROM Inventario
-            WHERE productoId = @productoId AND sucursalId = @sucursalId;
-
-            -- Si no hay stock suficiente, cancelar la inserción
-            IF @stockDisponible IS NULL OR @stockDisponible = 0
-            BEGIN
-                RAISERROR('El producto no está disponible por los momentos.', 16, 1);
-                ROLLBACK TRANSACTION;
-                CLOSE cursor_orden_detalle;  -- Nombre del cursor cambiado
-                DEALLOCATE cursor_orden_detalle;  -- Nombre del cursor cambiado
-                RETURN;
-            END
-            ELSE IF @stockDisponible < @cantidad
-            BEGIN
-                RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
-                ROLLBACK TRANSACTION;
-                CLOSE cursor_orden_detalle;  -- Nombre del cursor cambiado
-                DEALLOCATE cursor_orden_detalle;  -- Nombre del cursor cambiado
-                RETURN;
-            END
-
-            -- Leer la siguiente fila
-            FETCH NEXT FROM cursor_orden_detalle INTO @productoId, @cantidad;  -- Nombre del cursor cambiado
-        END
-
-        -- Cerrar y liberar el cursor
-        CLOSE cursor_orden_detalle;  -- Nombre del cursor cambiado
-        DEALLOCATE cursor_orden_detalle;  -- Nombre del cursor cambiado
+        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
     END
+    ELSE IF @stockDisponible < @cantidad
+    BEGIN
+        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- Si hay stock suficiente, insertar el registro
+    INSERT INTO OrdenDetalle (ordenId, productold, cantidad, precioPor)
+    VALUES (@ordenId, @productoId, @cantidad, (SELECT precioPor FROM inserted));
+END;
+
+--Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica).
+CREATE TRIGGER TR_FacturaDetalle_ValidarStock
+ON FacturaDetalle
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @productoId INT, @cantidad INT, @sucursalId INT, @stockDisponible INT, @facturaId INT;
+
+    -- Obtener los valores de la fila insertada
+    SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad FROM inserted;
+
+    -- Obtener la sucursalId desde la tabla VentaFisica
+    SELECT @sucursalId = sucursalId
+    FROM VentaFisica
+    WHERE facturaId = @facturaId;
+
+    -- Verificar el inventario específico de la sucursal
+    SELECT @stockDisponible = cantidad
+    FROM Inventario
+    WHERE productoId = @productoId AND sucursalId = @sucursalId;
+
+    -- Validar stock
+    IF @stockDisponible IS NULL OR @stockDisponible = 0
+    BEGIN
+        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    ELSE IF @stockDisponible < @cantidad
+    BEGIN
+        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- Si hay stock suficiente, insertar el registro
+    INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
+    VALUES (@facturaId, @productoId, @cantidad, (SELECT precioPor FROM inserted));
 END;
