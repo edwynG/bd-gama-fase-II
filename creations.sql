@@ -111,7 +111,7 @@ CREATE TABLE ProductoRecomendadoParaProducto (
 CREATE TABLE ProductoRecomendadoParaCliente (
     clienteId INT,
     productoRecomendadoId INT,
-    fechaRecomendacion DATE,
+    fechaRecomendacion DATETIME,
     mensaje VARCHAR(256),
     PRIMARY KEY (clienteId, productoRecomendadoId, fechaRecomendacion),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
@@ -130,7 +130,7 @@ CREATE TABLE TipoEnvio (
 CREATE TABLE HistorialClienteProducto (
     clienteId INT,
     productoId INT,
-    fecha DATE,
+    fecha DATETIME,
     tipoAccion VARCHAR(256) CHECK (tipoAccion IN ('Busqueda', 'Carrito', 'Compra')),
     PRIMARY KEY (clienteId, productoId, fecha),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
@@ -141,7 +141,7 @@ CREATE TABLE HistorialClienteProducto (
 CREATE TABLE Carrito (
     clienteId INT,
     productoId INT,
-    fechaAgregado DATE,
+    fechaAgregado DATETIME,
     cantidad INT CHECK (cantidad >= 0),
     precioPor MONEY CHECK (precioPor >= 0),
     PRIMARY KEY (clienteId, productoId),
@@ -159,7 +159,7 @@ CREATE TABLE FormaPago (
 --CREAMOS LA TABLA FACTURA, LA CUAL REFERENCIA A CLIENTE
 CREATE TABLE Factura (
     id INT PRIMARY KEY,
-    fechaEmision DATE,
+    fechaEmision DATETIME,
     clienteId INT,
     subTotal MONEY CHECK (subTotal >= 0),
     montoDescuentoTotal MONEY CHECK (montoDescuentoTotal >= 0),
@@ -195,7 +195,7 @@ CREATE TABLE OrdenOnline (
     id INT PRIMARY KEY,
     clienteId INT,
     nroOrden INT NOT NULL,
-    fechaCreacion DATE,
+    fechaCreacion DATETIME,
     tipoEnvioId INT,
     facturaId INT UNIQUE NULL,
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
@@ -355,8 +355,6 @@ CREATE TABLE VentaFisica (
     FOREIGN KEY (empleadoId) REFERENCES Empleado(id)
 );
 
--- Implementación de triggers
---- Parte I
 -- Trigger B
 CREATE TRIGGER updatePriceProduct
 ON ProveedorProducto
