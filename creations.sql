@@ -355,6 +355,95 @@ CREATE TABLE VentaFisica (
     FOREIGN KEY (empleadoId) REFERENCES Empleado(id)
 );
 
+-- Implementación de triggers
+--- Parte I
+/*
+Triggers para poblar las siguientes tablas: 
+    --- Factura y FacturaDetalle (en caso de ser orden online, orden detalle se copia por completo a factura detalle)
+*/
+-- Trigger A
+-- A.1
+CREATE TRIGGER InventoryFill
+ON ProveedorProducto
+AFTER INSERT 
+AS
+BEGIN
+    -- Calcula el posible nuevo id para el inventario
+	DECLARE @nuevoId INT;
+	SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM Inventario;
+
+    -- Actualizar o insertar en la tabla Inventario
+    MERGE INTO Inventario AS target
+    USING (SELECT productoId, SUM(cantidad) AS totalCantidad FROM inserted GROUP BY productoId) AS source
+    ON target.productoId = source.productoId
+    WHEN MATCHED THEN
+        UPDATE SET cantidad = target.cantidad + source.totalCantidad
+    WHEN NOT MATCHED THEN
+        INSERT (id, productoId, cantidad)
+        VALUES (@nuevoId,source.productoId, source.totalCantidad);
+END;
+
+-- A.2
+-- Orden Online
+
+-- Compra Fisica
+
+-- A.3
+-- Agregan
+CREATE TRIGGER addCartToHistory
+ON Carrito
+AFTER INSERT
+AS
+BEGIN
+	DECLARE @tipo VARCHAR(10) = 'Carrito';
+    INSERT INTO HistorialClienteProducto(clienteId, productoId, fecha, tipoAccion)
+    SELECT clienteId, productoId, fechaAgregado, @tipo FROM inserted 
+END;
+
+-- Compran
+CREATE TRIGGER addInvoiceToHistory
+ON FacturaDetalle
+AFTER INSERT
+AS
+BEGIN
+	DECLARE @tipo VARCHAR(10) = 'Compra';
+    INSERT INTO HistorialClienteProducto(clienteId, productoId, fecha, tipoAccion)
+    SELECT clienteId, productoId, fechaEmision, @tipo  
+    FROM (
+    	SELECT f.clienteId, temp.productoId, f.fechaEmision
+    	FROM inserted temp
+    	JOIN Factura f ON f.id = temp.facturaId
+    	GROUP BY f.clienteId, temp.productoId, f.fechaEmision
+    ) AS Compra 
+
+END;
+
+-- A.4
+CREATE TRIGGER recommendProductsToClient
+ON HistorialClienteProducto
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @message VARCHAR(50) = 'Producto recomendado por compra o busqueda frecuente';
+    INSERT INTO ProductoRecomendadoParaCliente(clienteId, productoRecomendadoId, fechaRecomendacion, mensaje)
+    SELECT Recomendados.clienteId, Recomendados.productoRecomendadoId, GETDATE(), @message
+    FROM (
+        -- Obtener productos recomendados para cliente dado los productos que compro o busco mas de tres veces
+        SELECT frecuentes.clienteId, pr.productoRecomendadoId 
+        FROM (
+            -- Obtener los productos que el cliente ha buscado o compro más de 3 veces
+            SELECT temp.clienteId, temp.productoId
+            FROM inserted temp
+            JOIN HistorialClienteProducto temp2 ON temp.clienteId = temp2.clienteId AND temp.productoId = temp2.productoId
+            WHERE temp.tipoAccion IN ('Busqueda', 'Compra')
+            GROUP BY temp.clienteId, temp.productoId
+            HAVING COUNT(*) > 3
+        ) AS frecuentes
+        JOIN ProductoRecomendadoParaProducto pr ON pr.productoId = frecuentes.productoId
+        GROUP BY frecuentes.clienteId, pr.productoRecomendadoId
+    ) as Recomendados
+END;
+
 -- Trigger B
 CREATE TRIGGER updatePriceProduct
 ON ProveedorProducto
