@@ -203,7 +203,7 @@ CREATE TABLE FacturaDetalle (
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor MONEY CHECK (precioPor >= 0),
     FOREIGN KEY (facturaId) REFERENCES Factura(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -237,7 +237,7 @@ CREATE TABLE OrdenDetalle (
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor MONEY CHECK (precioPor >= 0),
     FOREIGN KEY (ordenId) REFERENCES OrdenOnline(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -381,7 +381,7 @@ CREATE TABLE ProveedorProducto (
     proveedorId INT,
     productoId INT,
     fechaCompra DATE,
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor MONEY CHECK (precioPor >= 0),
     cantidad INT CHECK (cantidad >= 0),
     FOREIGN KEY (proveedorId) REFERENCES Proveedor(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -461,7 +461,7 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor DECIMAL(10, 2);
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor MONEY;
 
     -- Obtener los valores de la fila insertada
     SELECT @ordenId = ordenId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
@@ -497,7 +497,7 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor DECIMAL(10, 2);
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor MONEY;
 
     -- Obtener los valores de la fila insertada
     SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
