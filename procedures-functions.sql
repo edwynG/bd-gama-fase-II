@@ -7,6 +7,18 @@ CREATE PROCEDURE CrearFacturaFisica
     @empleadoId INT
 AS
 BEGIN
+
+    IF NOT EXISTS (SELECT 1 FROM Empleado WHERE id = @empleadoId)
+    BEGIN
+        RAISERROR('Empleado no encontrado', 16, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM Cliente WHERE id = @clienteId)
+    BEGIN
+        RAISERROR('Cliente no encontrado', 16, 1);
+        RETURN;
+    END
     -- Variables para almacenar los totales
     DECLARE @subTotal MONEY = 0,
             @montoIVA MONEY = 0,
