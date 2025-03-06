@@ -41,13 +41,6 @@ BEGIN
     INSERT INTO VentaFisica (facturaId, sucursalId, empleadoId)
     VALUES (@facturaId, @sucursalId, @empleadoId);
 
-    -- Insertar los detalles de la factura
-    INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
-    SELECT @facturaId, c.productoId, c.cantidad, c.precioPor
-    FROM Carrito c
-    WHERE c.clienteId = @clienteId;
-
-    -- No se elimina el carrito
 END
 
 -- Implementacion de funciones
