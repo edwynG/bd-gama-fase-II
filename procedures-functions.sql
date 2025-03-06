@@ -24,8 +24,8 @@ BEGIN
             @montoIVA MONEY = 0,
             @montoTotal MONEY = 0,
             @fechaEmision DATETIME = GETDATE(),
-            @facturaId INT,
-            @sucursalId INT;
+            @sucursalId INT,
+            @facturaId INT;
 
     -- Obtener la sucursal del empleado
     SELECT @sucursalId = sucursalId
@@ -42,12 +42,12 @@ BEGIN
     -- Calcular el monto total
     SET @montoTotal = @subTotal + @montoIVA;
 
-    -- Insertar la nueva factura
-    INSERT INTO Factura (fechaEmisión, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
-    VALUES (@fechaEmision, @clienteId, @subTotal, 0, 18, @montoIVA, @montoTotal);
+    -- Obtener el siguiente ID
+    SELECT @facturaId = ISNULL(MAX(id), 0) + 1 FROM Factura;
 
-    -- Obtener el ID de la factura generada
-    SET @facturaId = SCOPE_IDENTITY();
+    -- Insertar la nueva factura
+    INSERT INTO Factura (id, fechaEmisión, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
+    VALUES (@facturaId, @fechaEmision, @clienteId, @subTotal, 0, 18, @montoIVA, @montoTotal);
 
     -- Crear la relación en VentaFisica
     INSERT INTO VentaFisica (facturaId, sucursalId, empleadoId)
