@@ -89,7 +89,7 @@ CREATE TABLE Producto (
     codigoBarra VARCHAR(256) UNIQUE,
     descripcion VARCHAR(256),
     tipoPrecio VARCHAR(256) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
     esExentoIVA BIT NOT NULL,
     categoriaId INT,
     marcaId INT,
@@ -123,7 +123,7 @@ CREATE TABLE TipoEnvio (
     id INT PRIMARY KEY,
     nombreEnvio VARCHAR(256) NOT NULL,
     tiempoEstimadoEntrega INT,
-    costoEnvio MONEY CHECK (costoEnvio >= 0)
+    costoEnvio DECIMAL(10, 2) CHECK (costoEnvio >= 0)
 );
 
 -- CREAMOS LA TABLA HISTORIA DE CLIENTE, LA CUAL REFERENCIA A CLIENTE Y PRODUCTO
@@ -143,7 +143,7 @@ CREATE TABLE Carrito (
     productoId INT,
     fechaAgregado DATETIME,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
     PRIMARY KEY (clienteId, productoId),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -161,11 +161,11 @@ CREATE TABLE Factura (
     id INT PRIMARY KEY,
     fechaEmision DATETIME,
     clienteId INT,
-    subTotal MONEY CHECK (subTotal >= 0),
-    montoDescuentoTotal MONEY CHECK (montoDescuentoTotal >= 0),
+    subTotal DECIMAL(10, 2) CHECK (subTotal >= 0),
+    montoDescuentoTotal DECIMAL(10, 2) CHECK (montoDescuentoTotal >= 0),
     porcentajeIVA DECIMAL(5, 2) CHECK (porcentajeIVA >= 0),
-    montoIVA MONEY CHECK (montoIVA >= 0),
-    montoTotal MONEY CHECK (montoTotal >= 0),
+    montoIVA DECIMAL(10, 2) CHECK (montoIVA >= 0),
+    montoTotal DECIMAL(10, 2) CHECK (montoTotal >= 0),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id)
 );
 
@@ -243,7 +243,7 @@ CREATE TABLE Promo (
     slogan VARCHAR(256),
     codigo INT UNIQUE,
     tipoDescuento VARCHAR(256) CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
-    valorDescuento MONEY CHECK (valorDescuento >= 0),
+    valorDescuento DECIMAL(10, 2) CHECK (valorDescuento >= 0),
     fechaInicio DATE,
     fechaFin DATE,
     tipoPromocion VARCHAR(256) CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos'))
@@ -288,7 +288,7 @@ CREATE TABLE Cargo (
     id INT PRIMARY KEY,
     nombre VARCHAR(256) NOT NULL,
     descripcion VARCHAR(256),
-    salarioBasePorHora MONEY CHECK (salarioBasePorHora >= 0)
+    salarioBasePorHora DECIMAL(10, 2) CHECK (salarioBasePorHora >= 0)
 );
 
 -- CREAMOS LA TABLA EMPLEADO, LA CUAL REFERENCIA A CARGO, SUCURSAL Y A EMPLEADO A TRAVEZ DE LA RECURSIVIDAD
@@ -303,7 +303,7 @@ CREATE TABLE Empleado (
     empleadoSupervisorId INT,
     sucursalId INT,
     fechaContrato DATE,
-    bonoFijoMensual MONEY CHECK (bonoFijoMensual >= 0),
+    bonoFijoMensual DECIMAL(10, 2) CHECK (bonoFijoMensual >= 0),
     horaInicio INT CHECK (horaInicio BETWEEN 0 AND 23),
     horaFin INT CHECK (horaFin BETWEEN 0 AND 23),
     cantidadDiasTrabajoPorSemana INT CHECK (cantidadDiasTrabajoPorSemana BETWEEN 1 AND 7),
