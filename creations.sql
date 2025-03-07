@@ -113,7 +113,7 @@ CREATE TABLE Producto (
     codigoBarra VARCHAR(MAX),
     descripcion VARCHAR(MAX),
     tipoPrecio VARCHAR(MAX) CHECK (tipoPrecio IN ('PorUnidad', 'PorPesoKg')),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     esExentoIVA BIT NOT NULL,
     categoriaId INT,
     marcaId INT,
@@ -151,7 +151,7 @@ CREATE TABLE TipoEnvio (
     id INT PRIMARY KEY,
     nombreEnvio VARCHAR(MAX) NOT NULL,
     tiempoEstimadoEntrega INT,
-    costoEnvio MONEY CHECK (costoEnvio >= 0)
+    costoEnvio DECIMAL (10,2) CHECK (costoEnvio >= 0)
 );
 
 -- CREAMOS LA TABLA HISTORIA DE CLIENTE, LA CUAL REFERENCIA A CLIENTE Y PRODUCTO
@@ -171,7 +171,7 @@ CREATE TABLE Carrito (
     productoId INT,
     fechaAgregado DATE,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     PRIMARY KEY (clienteId, productoId),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -189,11 +189,11 @@ CREATE TABLE Factura (
     id INT PRIMARY KEY,
     fechaEmision DATE,
     clienteId INT,
-    subTotal MONEY CHECK (subTotal >= 0),
-    montoDescuentoTotal MONEY CHECK (montoDescuentoTotal >= 0),
+    subTotal DECIMAL (10,2) CHECK (subTotal >= 0),
+    montoDescuentoTotal DECIMAL (10,2) CHECK (montoDescuentoTotal >= 0),
     porcentajeIVA DECIMAL(5, 2) CHECK (porcentajeIVA >= 0),
-    montoIVA MONEY CHECK (montoIVA >= 0),
-    montoTotal MONEY CHECK (montoTotal >= 0),
+    montoIVA DECIMAL (10,2) CHECK (montoIVA >= 0),
+    montoTotal DECIMAL (10,2) CHECK (montoTotal >= 0),
     FOREIGN KEY (clienteId) REFERENCES Cliente(id)
 );
 
@@ -203,7 +203,7 @@ CREATE TABLE FacturaDetalle (
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     FOREIGN KEY (facturaId) REFERENCES Factura(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -237,7 +237,7 @@ CREATE TABLE OrdenDetalle (
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     FOREIGN KEY (ordenId) REFERENCES OrdenOnline(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -271,7 +271,7 @@ CREATE TABLE Promo (
     slogan VARCHAR(MAX),
     codigo INT,
     tipoDescuento VARCHAR(MAX) CHECK (tipoDescuento IN ('Porcentaje', 'Fijo')),
-    valorDescuento MONEY CHECK (valorDescuento >= 0),
+    valorDescuento DECIMAL (10,2) CHECK (valorDescuento >= 0),
     fechaInicio DATE,
     fechaFin DATE,
     tipoPromocion VARCHAR(MAX) CHECK (tipoPromocion IN ('Online', 'Fisica', 'Ambos'))
@@ -322,7 +322,7 @@ CREATE TABLE Cargo (
     id INT PRIMARY KEY,
     nombre VARCHAR(MAX) NOT NULL,
     descripcion VARCHAR(MAX),
-    salarioBasePorHora MONEY CHECK (salarioBasePorHora >= 0)
+    salarioBasePorHora DECIMAL (10,2) CHECK (salarioBasePorHora >= 0)
 );
 
 -- CREAMOS LA TABLA EMPLEADO, LA CUAL REFERENCIA A CARGO, SUCURSAL Y A EMPLEADO A TRAVEZ DE LA RECURSIVIDAD
@@ -337,7 +337,7 @@ CREATE TABLE Empleado (
     empleadoSupervisorId INT,
     sucursalId INT,
     fechaContrato DATE,
-    bonoFijoMensual MONEY CHECK (bonoFijoMensual >= 0),
+    bonoFijoMensual DECIMAL (10,2) CHECK (bonoFijoMensual >= 0),
     horaInicio INT CHECK (
         horaInicio BETWEEN 0
         AND 23
@@ -381,7 +381,7 @@ CREATE TABLE ProveedorProducto (
     proveedorId INT,
     productoId INT,
     fechaCompra DATE,
-    precioPor MONEY CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     cantidad INT CHECK (cantidad >= 0),
     FOREIGN KEY (proveedorId) REFERENCES Proveedor(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -461,7 +461,7 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor MONEY;
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor DECIMAL (10,2);
 
     -- Obtener los valores de la fila insertada
     SELECT @ordenId = ordenId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
@@ -497,7 +497,7 @@ INSTEAD OF INSERT
 AS
 BEGIN
     -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor MONEY;
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor DECIMAL (10,2);
 
     -- Obtener los valores de la fila insertada
     SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;

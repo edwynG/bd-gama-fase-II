@@ -20,9 +20,9 @@ BEGIN
         RETURN;
     END
     -- Variables para almacenar los totales
-    DECLARE @subTotal MONEY = 0,
-            @montoIVA MONEY = 0,
-            @montoTotal MONEY = 0,
+    DECLARE @subTotal DECIMAL (10,2) = 0,
+            @montoIVA DECIMAL (10,2) = 0,
+            @montoTotal DECIMAL (10,2) = 0,
             @fechaEmision DATETIME = GETDATE(),
             @sucursalId INT,
             @facturaId INT;
@@ -53,6 +53,38 @@ BEGIN
     INSERT INTO VentaFisica (facturaId, sucursalId, empleadoId)
     VALUES (@facturaId, @sucursalId, @empleadoId);
 
+    PRINT 'Factura y VentaFisica Creados correctamente.';
+
 END
+
+-- PROCEDIMIENTO D Agregar producto a factura física dada una factura, producto, cantidad y precio.
+
+CREATE PROCEDURE AgregarProductoAFacturaFisica
+    @facturaId INT,      -- ID de la factura a la que se agregará el producto
+    @productoId INT,     -- ID del producto a agregar
+    @cantidad INT,       -- Cantidad del producto
+    @precioPor DECIMAL (10,2)     -- Precio por unidad del producto
+AS
+BEGIN
+    DECLARE @nuevoId INT;
+
+    -- Verificar si la factura pertenece a una venta física
+    IF EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId)
+    BEGIN
+        -- Obtener el siguiente ID para la tabla FacturaDetalle
+        SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM FacturaDetalle;
+
+        -- Insertar el producto en FacturaDetalle
+        INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+        VALUES (@nuevoId, @facturaId, @productoId, @cantidad, @precioPor);
+
+        PRINT 'Producto agregado correctamente a la factura fisica.';
+    END
+    ELSE
+    BEGIN
+        -- Si la factura no pertenece a una venta física, generar un error
+        RAISERROR('La factura no corresponde a una venta física.', 16, 1);
+    END
+END;
 
 -- Implementacion de funciones
