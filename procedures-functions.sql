@@ -46,7 +46,7 @@ BEGIN
     SELECT @facturaId = ISNULL(MAX(id), 0) + 1 FROM Factura;
 
     -- Insertar la nueva factura
-    INSERT INTO Factura (id, fechaEmisión, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
+    INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
     VALUES (@facturaId, @fechaEmision, @clienteId, @subTotal, 0, 18, @montoIVA, @montoTotal);
 
     -- Crear la relación en VentaFisica
