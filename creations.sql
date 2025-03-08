@@ -357,10 +357,6 @@ CREATE TABLE VentaFisica (
 
 -- Implementación de triggers
 --- Parte I
-/*
-Triggers para poblar las siguientes tablas: 
-    --- Factura y FacturaDetalle (en caso de ser orden online, orden detalle se copia por completo a factura detalle)
-*/
 -- Trigger A
 -- A.1
 CREATE TRIGGER InventoryFill
@@ -382,14 +378,144 @@ BEGIN
         INSERT (id, productoId, cantidad)
         VALUES (@nuevoId,source.productoId, source.totalCantidad);
 END;
+DROP TRIGGER CreateInvoiceOnlineOrder
 
 -- A.2
 -- Orden Online
+CREATE TRIGGER CreateInvoiceOnlineOrder
+ON OrdenOnline
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar una tabla temporal para almacenar los registros de inserted
+    DECLARE @TempInserted TABLE (
+        id INT,
+        clienteId INT,
+        nroOrden INT,
+        fechaCreacion DATETIME,
+        tipoEnvioId INT,
+        facturaId INT
+    );
+
+    -- Insertar los registros de inserted en la tabla temporal
+    INSERT INTO @TempInserted (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+    SELECT id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId
+    FROM inserted;
+
+    -- Procesar cada registro individualmente
+    DECLARE @id INT;
+    DECLARE @clienteId INT;
+    DECLARE @nroOrden INT;
+    DECLARE @fechaCreacion DATETIME;
+    DECLARE @tipoEnvioId INT;
+    DECLARE @facturaId INT;
+
+    DECLARE cur CURSOR FOR
+    SELECT id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId
+    FROM @TempInserted;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- Verificar si la factura no existe para crearla
+        IF NOT EXISTS (SELECT 1 FROM Factura f WHERE f.id = @facturaId)
+        BEGIN
+            -- Crear la factura
+            INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
+            VALUES (@facturaId, GETDATE(), @clienteId, 0, 16, 0, 0, 0);
+
+            -- Insertar los detalles de la orden en FacturaDetalle
+            INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+            SELECT 
+                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM FacturaDetalle),
+                @facturaId,
+                productoId,
+                cantidad,
+                precioPor
+            FROM OrdenDetalle
+            WHERE ordenId = @id;
+        END
+
+        -- Insertar la orden online
+        INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+        VALUES (@id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId);
+
+        FETCH NEXT FROM cur INTO @id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId;
+    END
+
+    CLOSE cur;
+    DEALLOCATE cur;
+END;
 
 -- Compra Fisica
+CREATE TRIGGER CreateInvoicePhysicalSale
+ON VentaFisica
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar una tabla temporal para almacenar los registros de inserted
+    DECLARE @TempInserted TABLE (
+        facturaId INT,
+        sucursalId INT,
+        empleadoId INT
+    );
+
+    -- Insertar los registros de inserted en la tabla temporal
+    INSERT INTO @TempInserted (facturaId, sucursalId, empleadoId)
+    SELECT facturaId, sucursalId, empleadoId
+    FROM inserted;
+
+    -- Procesar cada registro individualmente
+    DECLARE @facturaId INT;
+    DECLARE @sucursalId INT;
+    DECLARE @empleadoId INT;
+
+    DECLARE cur CURSOR FOR
+    SELECT facturaId, sucursalId, empleadoId
+    FROM @TempInserted;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @facturaId, @sucursalId, @empleadoId;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- Verificar si la factura no existe para crearla
+        IF NOT EXISTS (SELECT 1 FROM Factura f WHERE f.id = @facturaId)
+        BEGIN
+            -- Crear la factura con un cliente aleatorio
+            DECLARE @randomClienteId INT;
+            SELECT TOP 1 @randomClienteId = id FROM Cliente ORDER BY NEWID();
+
+            INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
+            VALUES (@facturaId, GETDATE(), @randomClienteId, 0, 16, 0, 0, 0);
+
+            -- Insertar al menos 3 productos aleatorios en FacturaDetalle
+            INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+            SELECT TOP 4
+                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM FacturaDetalle),
+                @facturaId,
+                id,
+                CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
+                precioPor
+            FROM Producto
+            ORDER BY NEWID();
+        END
+
+        -- Insertar la venta física
+        INSERT INTO VentaFisica (facturaId, sucursalId, empleadoId)
+        VALUES (@facturaId, @sucursalId, @empleadoId);
+
+        FETCH NEXT FROM cur INTO @facturaId, @sucursalId, @empleadoId;
+    END
+
+    CLOSE cur;
+    DEALLOCATE cur;
+END;
 
 -- A.3
--- Agregan
+-- Agregan al carrito
 CREATE TRIGGER addCartToHistory
 ON Carrito
 AFTER INSERT
@@ -400,7 +526,7 @@ BEGIN
     SELECT clienteId, productoId, fechaAgregado, @tipo FROM inserted 
 END;
 
--- Compran
+-- Compran un producto
 CREATE TRIGGER addInvoiceToHistory
 ON FacturaDetalle
 AFTER INSERT
