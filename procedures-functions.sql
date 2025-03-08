@@ -89,3 +89,79 @@ BEGIN
 END;
 
 -- Implementacion de funciones
+
+-- FUNCION A
+
+-- costoEnvio
+CREATE FUNCTION costoEnvio (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @costo DECIMAL(10,2)
+
+    -- Verificar si la factura está asociada a una Orden Online
+    IF EXISTS (
+        SELECT 1
+        FROM OrdenOnline
+        WHERE facturaId = @facturaId
+    )
+    BEGIN
+        -- Si existe, obtener el costo del envío
+        SELECT @costo = te.costoEnvio
+        FROM OrdenOnline oo
+        JOIN TipoEnvio te ON oo.tipoEnviold = te.id
+        WHERE oo.facturaId = @facturaId
+    END
+    ELSE
+    BEGIN
+        -- Si no existe, el costo de envío es 0
+        SET @costo = 0.00
+    END
+
+    RETURN @costo
+END
+
+-- montoTotal
+CREATE FUNCTION montoTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subTotal DECIMAL(10,2)
+    DECLARE @montoDescuentoTotal DECIMAL(10,2)
+    DECLARE @montoIVA DECIMAL(10,2)
+    DECLARE @costoEnvio DECIMAL(10,2)
+    DECLARE @total DECIMAL(10,2)
+
+    -- Obtener los valores utilizando las funciones existentes
+    SET @subTotal = dbo.subTotal(@facturaId)
+    SET @montoDescuentoTotal = dbo.montoDescuentoTotal(@facturaId)
+    SET @montoIVA = dbo.montoIVA(@facturaId)
+    SET @costoEnvio = dbo.costoEnvio(@facturaId)
+
+    -- Calcular el monto total
+    SET @total = (@subTotal - @montoDescuentoTotal) + @montoIVA + @costoEnvio
+
+    RETURN @total
+END
+
+-- subTotal
+
+CREATE FUNCTION subTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subtotal DECIMAL(10,2)
+
+    -- Obtener el subtotal directamente de la tabla Factura
+    SELECT @subtotal = subTotal
+    FROM Factura
+    WHERE id = @facturaId
+
+    -- Si no se encuentra la factura, el subtotal es 0
+    IF @subtotal IS NULL
+    BEGIN
+        SET @subtotal = 0.00
+    END
+
+    RETURN @subtotal
+END
