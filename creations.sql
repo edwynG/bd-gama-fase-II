@@ -378,7 +378,6 @@ BEGIN
         INSERT (id, productoId, cantidad)
         VALUES (@nuevoId,source.productoId, source.totalCantidad);
 END;
-DROP TRIGGER CreateInvoiceOnlineOrder
 
 -- A.2
 -- Orden Online
@@ -426,6 +425,25 @@ BEGIN
             INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
             VALUES (@facturaId, GETDATE(), @clienteId, 0, 16, 0, 0, 0);
 
+            -- Insertar la orden online
+            INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+            VALUES (@id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId);
+
+            -- Verificar si existen detalles de la orden
+            IF NOT EXISTS (SELECT 1 FROM OrdenDetalle WHERE ordenId = @id)
+            BEGIN
+                -- Insertar al menos 3 productos aleatorios en OrdenDetalle
+                INSERT INTO OrdenDetalle (id, ordenId, productoId, cantidad, precioPor)
+                SELECT TOP 3
+                    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM OrdenDetalle),
+                    @id,
+                    id,
+                    CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
+                    precioPor
+                FROM Producto
+                ORDER BY NEWID();
+            END
+
             -- Insertar los detalles de la orden en FacturaDetalle
             INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
             SELECT 
@@ -437,10 +455,12 @@ BEGIN
             FROM OrdenDetalle
             WHERE ordenId = @id;
         END
-
-        -- Insertar la orden online
-        INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
-        VALUES (@id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId);
+        ELSE
+        BEGIN
+            -- Insertar la orden online
+            INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+            VALUES (@id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId);
+        END
 
         FETCH NEXT FROM cur INTO @id, @clienteId, @nroOrden, @fechaCreacion, @tipoEnvioId, @facturaId;
     END
