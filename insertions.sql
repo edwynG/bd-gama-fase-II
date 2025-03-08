@@ -1,3 +1,5 @@
+-- INSERTIONS PARTE II
+
 --TipoEnvio
 INSERT INTO TipoEnvio (id, nombreEnvio, tiempoEstimadoEntrega, costoEnvio) VALUES
 (1, 'Envio inmediato', 1, 50.00),

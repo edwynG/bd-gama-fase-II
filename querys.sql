@@ -1,4 +1,5 @@
--- Parte II
+-- CONSULTAS PARTE II
+
 --- Consulta D
 SELECT
     DISTINCT e.CI,

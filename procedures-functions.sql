@@ -1,4 +1,5 @@
 -- Implementacion de procedimientos
+-- PROCEDIMIENTOS PARTE II
 
 -- Procedimiento C Crear factura física dado un cliente y un empleado (esto creará también la relación VentaFisica).
 
