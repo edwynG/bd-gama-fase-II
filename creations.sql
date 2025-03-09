@@ -171,7 +171,7 @@ CREATE TABLE Factura (
 
 -- CREAMOS LA TABLA FACTURA DETALLE, LA CUAL REFERENCIA A FACTURA Y PRODUCTO
 CREATE TABLE FacturaDetalle (
-    id INT PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
@@ -205,7 +205,7 @@ CREATE TABLE OrdenOnline (
 
 -- CREAMOS LA TABLA ORDENDETALLE, LA CUAL REFERENCIA A ORDEN ONLINE Y A PRODUCTO
 CREATE TABLE OrdenDetalle (
-    id INT PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
@@ -356,3 +356,19 @@ CREATE TABLE VentaFisica (
 );
 
 -- Implementación de triggers
+
+-- Parte III 
+-- Trigger E
+
+   CREATE TRIGGER RestoreStock
+  ON FacturaDetalle
+  AFTER DELETE 
+  AS 
+  BEGIN
+
+    UPDATE i
+    SET i.cantidad = i.cantidad + d.cantidad
+    FROM Inventario i, deleted d
+    WHERE i.productoId = d.productoId;
+
+END;
