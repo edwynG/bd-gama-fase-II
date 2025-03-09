@@ -1,3 +1,208 @@
 -- Implementacion de procedimientos
+-- PROCEDIMIENTOS PARTE II
+
+-- Procedimiento C Crear factura física dado un cliente y un empleado (esto creará también la relación VentaFisica).
+
+CREATE PROCEDURE CrearFacturaFisica
+    @clienteId INT,
+    @empleadoId INT
+AS
+BEGIN
+
+    IF NOT EXISTS (SELECT 1 FROM Empleado WHERE id = @empleadoId)
+    BEGIN
+        RAISERROR('Empleado no encontrado', 16, 1);
+        RETURN;
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM Cliente WHERE id = @clienteId)
+    BEGIN
+        RAISERROR('Cliente no encontrado', 16, 1);
+        RETURN;
+    END
+    -- Variables para almacenar los totales
+    DECLARE @subTotal DECIMAL (10,2) = 0,
+            @montoIVA DECIMAL (10,2) = 0,
+            @montoTotal DECIMAL (10,2) = 0,
+            @fechaEmision DATETIME = GETDATE(),
+            @sucursalId INT,
+            @facturaId INT;
+
+    -- Obtener la sucursal del empleado
+    SELECT @sucursalId = sucursalId
+    FROM Empleado
+    WHERE id = @empleadoId;
+
+    -- Calcular el subtotal y el IVA a partir del carrito del cliente
+    SELECT @subTotal = SUM(c.cantidad * c.precioPor),
+           @montoIVA = SUM(CASE WHEN p.esExentoIVA = 0 THEN (c.cantidad * c.precioPor) * 0.16 ELSE 0 END)
+    FROM Carrito c
+    JOIN Producto p ON c.productoId = p.id
+    WHERE c.clienteId = @clienteId;
+
+    -- Calcular el monto total
+    SET @montoTotal = @subTotal + @montoIVA;
+
+    -- Obtener el siguiente ID
+    SELECT @facturaId = ISNULL(MAX(id), 0) + 1 FROM Factura;
+
+    -- Insertar la nueva factura
+    INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
+    VALUES (@facturaId, @fechaEmision, @clienteId, @subTotal, 0, 18, @montoIVA, @montoTotal);
+
+    -- Crear la relación en VentaFisica
+    INSERT INTO VentaFisica (facturaId, sucursalId, empleadoId)
+    VALUES (@facturaId, @sucursalId, @empleadoId);
+
+    PRINT 'Factura y VentaFisica Creados correctamente.';
+
+END
+
+-- PROCEDIMIENTO D Agregar producto a factura física dada una factura, producto, cantidad y precio.
+
+CREATE PROCEDURE AgregarProductoAFacturaFisica
+    @facturaId INT,      -- ID de la factura a la que se agregará el producto
+    @productoId INT,     -- ID del producto a agregar
+    @cantidad INT,       -- Cantidad del producto
+    @precioPor DECIMAL (10,2)     -- Precio por unidad del producto
+AS
+BEGIN
+    DECLARE @nuevoId INT;
+
+    -- Verificar si la factura pertenece a una venta física
+    IF EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId)
+    BEGIN
+        -- Obtener el siguiente ID para la tabla FacturaDetalle
+        SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM FacturaDetalle;
+
+        -- Insertar el producto en FacturaDetalle
+        INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+        VALUES (@nuevoId, @facturaId, @productoId, @cantidad, @precioPor);
+
+        PRINT 'Producto agregado correctamente a la factura fisica.';
+    END
+    ELSE
+    BEGIN
+        -- Si la factura no pertenece a una venta física, generar un error
+        RAISERROR('La factura no corresponde a una venta física.', 16, 1);
+    END
+END;
 
 -- Implementacion de funciones
+
+-- FUNCION A
+
+-- costoEnvio
+CREATE FUNCTION costoEnvio (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @costo DECIMAL(10,2)
+
+    -- Verificar si la factura está asociada a una Orden Online
+    IF EXISTS (
+        SELECT 1
+        FROM OrdenOnline
+        WHERE facturaId = @facturaId
+    )
+    BEGIN
+        -- Si existe, obtener el costo del envío
+        SELECT @costo = te.costoEnvio
+        FROM OrdenOnline oo
+        JOIN TipoEnvio te ON oo.tipoEnviold = te.id
+        WHERE oo.facturaId = @facturaId
+    END
+    ELSE
+    BEGIN
+        -- Si no existe, el costo de envío es 0
+        SET @costo = 0.00
+    END
+
+    RETURN @costo
+END
+
+-- montoDescuentoTotal 
+
+CREATE FUNCTION montoDescuentoTotal (@facturaId)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @montoDescuentoTotal DECIMAL(10,2) = 0;
+
+    SELECT @montoDescuentoTotal = COALESCE(SUM(p.valorDescuento), 0)
+    FROM FacturaPromo AS fp 
+    JOIN Promo AS p ON fp.promoId = p.id
+    WHERE fp.facturaId = @facturaId
+    
+    RETURN @montoDescuentoTotal
+END
+
+-- montoIVA
+
+CREATE FUNCTION montoIVA
+RETURNS DECIMAL(10,2)
+AS 
+BEGIN
+    DECLARE @montoIVA DECIMAL(10,2) = 0;
+
+    SELECT @montoIVA = (SUM(productoPrecio.precioFinal)*16)/100
+    FROM Factura AS f
+    JOIN FacturaDetalle AS fd ON f.id = fd.id
+    JOIN (SELECT p.id, 
+                 COALESCE(p.precioPor-p1.valorDescuento,p.precioPor) AS precioFinal,
+                 p.esExentoIVA
+                 
+          FROM Producto AS p
+          JOIN PromoEspecializada AS pe ON p.id = pe.productoId 
+          JOIN Promo AS p1 ON pe.promoId = p1.id
+        ) AS productoPrecio ON fd.productoId = productoPrecio.id
+    WHERE productoPrecio.esExentoIVA = 0 
+
+    RETURN @montoIVA
+END
+
+-- montoTotal
+CREATE FUNCTION montoTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subTotal DECIMAL(10,2)
+    DECLARE @montoDescuentoTotal DECIMAL(10,2)
+    DECLARE @montoIVA DECIMAL(10,2)
+    DECLARE @costoEnvio DECIMAL(10,2)
+    DECLARE @total DECIMAL(10,2)
+
+    -- Obtener los valores utilizando las funciones existentes
+    SET @subTotal = dbo.subTotal(@facturaId)
+    SET @montoDescuentoTotal = dbo.montoDescuentoTotal(@facturaId)
+    SET @montoIVA = dbo.montoIVA(@facturaId)
+    SET @costoEnvio = dbo.costoEnvio(@facturaId)
+
+    -- Calcular el monto total
+    SET @total = (@subTotal - @montoDescuentoTotal) + @montoIVA + @costoEnvio
+
+    RETURN @total
+END
+
+-- subTotal
+
+CREATE FUNCTION subTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subtotal DECIMAL(10,2)
+
+    -- Obtener el subtotal directamente de la tabla Factura
+    SELECT @subtotal = subTotal
+    FROM Factura
+    WHERE id = @facturaId
+
+    -- Si no se encuentra la factura, el subtotal es 0
+    IF @subtotal IS NULL
+    BEGIN
+        SET @subtotal = 0.00
+    END
+
+    RETURN @subtotal
+END
+
