@@ -201,7 +201,7 @@ CREATE TABLE Factura (
 
 -- CREAMOS LA TABLA FACTURA DETALLE, LA CUAL REFERENCIA A FACTURA Y PRODUCTO
 CREATE TABLE FacturaDetalle (
-    id INT PRIMARY KEY,
+    id IDENTITY PRIMARY KEY,
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
@@ -235,7 +235,7 @@ CREATE TABLE OrdenOnline (
 
 -- CREAMOS LA TABLA ORDENDETALLE, LA CUAL REFERENCIA A ORDEN ONLINE Y A PRODUCTO
 CREATE TABLE OrdenDetalle (
-    id INT PRIMARY KEY,
+    id IDENTITY PRIMARY KEY,
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
