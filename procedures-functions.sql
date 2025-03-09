@@ -148,13 +148,14 @@ BEGIN
     SELECT @montoIVA = (SUM(productoPrecio.precioFinal)*16)/100
     FROM Factura AS f
     JOIN FacturaDetalle AS fd ON f.id = fd.id
-    JOIN (SELECT p.id, 
-                 COALESCE(p.precioPor-p1.valorDescuento,p.precioPor) AS precioFinal,
+    JOIN (SELECT fd1.id, 
+                 COALESCE(fd1.precioPor-p1.valorDescuento,fd1.precioPor) AS precioFinal,
                  p.esExentoIVA
                  
           FROM Producto AS p
           JOIN PromoEspecializada AS pe ON p.id = pe.productoId 
           JOIN Promo AS p1 ON pe.promoId = p1.id
+          JOIN FacturaDetalle AS fd1 on p.id = fd1.productoId
         ) AS productoPrecio ON fd.productoId = productoPrecio.id
     WHERE productoPrecio.esExentoIVA = 0 
 
