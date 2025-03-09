@@ -171,7 +171,7 @@ CREATE TABLE Factura (
 
 -- CREAMOS LA TABLA FACTURA DETALLE, LA CUAL REFERENCIA A FACTURA Y PRODUCTO
 CREATE TABLE FacturaDetalle (
-    id INT PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
@@ -205,7 +205,7 @@ CREATE TABLE OrdenOnline (
 
 -- CREAMOS LA TABLA ORDENDETALLE, LA CUAL REFERENCIA A ORDEN ONLINE Y A PRODUCTO
 CREATE TABLE OrdenDetalle (
-    id INT PRIMARY KEY,
+    id INT IDENTITY(1,1) PRIMARY KEY,
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
@@ -433,9 +433,8 @@ BEGIN
             IF NOT EXISTS (SELECT 1 FROM OrdenDetalle WHERE ordenId = @id)
             BEGIN
                 -- Insertar al menos 3 productos aleatorios en OrdenDetalle
-                INSERT INTO OrdenDetalle (id, ordenId, productoId, cantidad, precioPor)
-                SELECT TOP 3
-                    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM OrdenDetalle),
+                INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
+                SELECT TOP 4
                     @id,
                     id,
                     CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
@@ -445,9 +444,8 @@ BEGIN
             END
 
             -- Insertar los detalles de la orden en FacturaDetalle
-            INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+            INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
             SELECT 
-                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM FacturaDetalle),
                 @facturaId,
                 productoId,
                 cantidad,
@@ -512,9 +510,8 @@ BEGIN
             VALUES (@facturaId, GETDATE(), @randomClienteId, 0, 16, 0, 0, 0);
 
             -- Insertar al menos 3 productos aleatorios en FacturaDetalle
-            INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
+            INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
             SELECT TOP 4
-                ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + (SELECT ISNULL(MAX(id), 0) FROM FacturaDetalle),
                 @facturaId,
                 id,
                 CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
