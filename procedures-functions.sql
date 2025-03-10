@@ -146,8 +146,7 @@ BEGIN
     DECLARE @montoIVA DECIMAL(10,2) = 0;
 
     SELECT @montoIVA = (SUM(productoPrecio.precioFinal)*16)/100
-    FROM Factura AS f
-    JOIN FacturaDetalle AS fd ON f.id = fd.id
+    FROM FacturaDetalle AS fd 
     JOIN (SELECT fd1.id, 
                  COALESCE(fd1.precioPor-p1.valorDescuento,fd1.precioPor) AS precioFinal,
                  p.esExentoIVA
