@@ -121,42 +121,68 @@ BEGIN
     RETURN @costo
 END
 
--- montoDescuentoTotal 
+--montoDescuentoTotal
 
-CREATE FUNCTION montoDescuentoTotal (@facturaId)
+CREATE FUNCTION montoDescuentoTotal (@facturaId INT)
 RETURNS DECIMAL(10,2)
 AS
 BEGIN
     DECLARE @montoDescuentoTotal DECIMAL(10,2) = 0;
+	
+	SELECT @montoDescuentoTotal = COALESCE(SUM(DescuentoEspecial.montoDescuentoEspecial) + SUM(p2.valorDescuento),SUM(DescuentoEspecial.montoDescuentoEspecial)) 
+			
+	FROM(
+		/* Obtengo el descuento que se le hace a cada producto individualmente */
+		
+	    SELECT COALESCE(p1.valorDescuento*fd.cantidad,0) AS montoDescuentoEspecial,
+	    		fd.facturaId
+	    FROM FacturaDetalle AS fd
+	    LEFT JOIN PromoEspecializada AS pe ON fd.productoId = pe.productoId   
+	    LEFT JOIN Promo AS p1 ON pe.promoId = p1.id 
+	    
+    )AS DescuentoEspecial 
+    LEFT JOIN FacturaPromo AS fp ON DescuentoEspecial.facturaId = fp.facturaId
+    LEFT JOIN Promo AS p2 ON fp.promoId = p2.id
 
-    SELECT @montoDescuentoTotal = COALESCE(SUM(p.valorDescuento), 0)
-    FROM FacturaPromo AS fp 
-    JOIN Promo AS p ON fp.promoId = p.id
-    WHERE fp.facturaId = @facturaId
+    WHERE DescuentoEspecial.facturaId = @facturaId
     
+    
+    GROUP BY DescuentoEspecial.facturaId
     RETURN @montoDescuentoTotal
 END
 
+
+
 -- montoIVA
 
-CREATE FUNCTION montoIVA
+CREATE FUNCTION montoIVA (@facturaId INT)
 RETURNS DECIMAL(10,2)
 AS 
 BEGIN
     DECLARE @montoIVA DECIMAL(10,2) = 0;
-
-    SELECT @montoIVA = (SUM(productoPrecio.precioFinal)*16)/100
-    FROM FacturaDetalle AS fd 
-    JOIN (SELECT fd1.id, 
-                 COALESCE(fd1.precioPor-p1.valorDescuento,fd1.precioPor) AS precioFinal,
-                 p.esExentoIVA
-                 
-          FROM Producto AS p
-          JOIN PromoEspecializada AS pe ON p.id = pe.productoId 
-          JOIN Promo AS p1 ON pe.promoId = p1.id
-          JOIN FacturaDetalle AS fd1 on p.id = fd1.productoId
-        ) AS productoPrecio ON fd.productoId = productoPrecio.id
-    WHERE productoPrecio.esExentoIVA = 0 
+	
+	/* Se resta el monto total del precio de todos los productos
+	   con el monto dado por todas las promos aplicadas sobre esa factura
+	   Adicionalmente se calcula de una vez el IVA */
+	SELECT @montoIVA = COALESCE(((SUM(Montos.montoPorGrupo) - SUM(p2.valorDescuento))*16)/100,(SUM(Montos.montoPorGrupo)*16)/100) 
+	FROM(
+		/*Obtenemos los precios con descuentos especializados por grupo de productos,
+		 por eso se multiplica por la cantidad*/
+		SELECT fd.facturaId, 
+	           COALESCE((fd.precioPor-p1.valorDescuento)*fd.cantidad,fd.precioPor*fd.cantidad) AS montoPorGrupo
+	                 
+	    FROM Producto AS p
+	    LEFT JOIN PromoEspecializada AS pe ON p.id = pe.productoId 
+	    LEFT JOIN Promo AS p1 ON pe.promoId = p1.id
+	    JOIN FacturaDetalle AS fd on p.id = fd.productoId
+	  	WHERE p.esExentoIVA = 0
+		) AS Montos
+		
+	LEFT JOIN FacturaPromo AS fp ON Montos.facturaId = fp.facturaId
+	LEFT JOIN Promo AS p2 ON fp.promoId = p2.id
+	
+	WHERE Montos.facturaId = @FacturaId 
+	GROUP BY Montos.facturaId
 
     RETURN @montoIVA
 END
