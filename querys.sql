@@ -332,7 +332,7 @@ LEFT JOIN (
     JOIN 
         ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
     WHERE 
-        h.fecha > pr.fechaRecomendacion
+        h.fecha > pr.fechaRecomendacion AND h.tipoAccion = 'Compra'
     GROUP BY 
         h.clienteId
 ) AS recomendados ON c.id = recomendados.clienteId
@@ -349,7 +349,7 @@ LEFT JOIN (
     LEFT JOIN 
         ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
     WHERE 
-        h.fecha <= pr.fechaRecomendacion OR pr.fechaRecomendacion IS NULL
+        h.fecha <= pr.fechaRecomendacion OR pr.fechaRecomendacion IS NULL AND h.tipoAccion = 'Compra'
     GROUP BY 
         h.clienteId
 ) AS no_recomendados ON c.id = no_recomendados.clienteId
