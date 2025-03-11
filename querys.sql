@@ -302,3 +302,56 @@ FROM
     JOIN Categoria c ON c.id = i.productoId
 WHERE
     c.nombre = 'Chucherias';
+
+-- CONSULTA E LISTA DE PRODUCTOS RECOMENDADOS Y NO RECOMENDADOS ANTES Y DESPUES DE SU COMPRA
+
+SELECT 
+    c.CI,
+    c.nombre,
+    c.sexo,
+    COALESCE(recomendados.productos_recomendados, 0) AS productos_recomendados,
+    COALESCE(no_recomendados.productos_no_recomendados, 0) AS productos_no_recomendados,
+    COALESCE(recomendados.porcentaje_recomendados, 0) AS ComprasDespuesDeRecomendacion,
+    COALESCE(no_recomendados.porcentaje_no_recomendados, 0) AS ComprasAntesDeRecomendacion
+    -- Se utiliza COALESCE porque puede que no haya referencia en historial cliente o en alguna de las tablas y asi se evitan errores
+FROM 
+    Cliente c
+
+    -- LISTA DE CLIENTES Y TOTAL DE PRODUCTOS QUE COMPRARON LUEGO DE UNA RECOMENDACION
+LEFT JOIN (
+    SELECT 
+        h.clienteId,
+        COUNT(DISTINCT h.productoId) AS productos_recomendados,
+        CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_recomendados
+        /* NULLIF es una función que devuelve NULL si el primer argumento es igual al segundo. En este caso, si el conteo de productos únicos es 0, NULLIF devolverá NULL.
+           esto es importante para evitar la división por cero. Si no hay productos, en lugar de intentar dividir por 0 (lo que causaría un error), se devolverá NULL.
+           La función CAST convierte el resultado de COUNT(DISTINCT h.productoId) a un tipo de dato FLOAT.
+        */
+    FROM 
+        HistorialClienteProducto h
+    JOIN 
+        ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
+    WHERE 
+        h.fecha > pr.fechaRecomendacion
+    GROUP BY 
+        h.clienteId
+) AS recomendados ON c.id = recomendados.clienteId
+
+    -- LISTA DE CLIENTES Y TOTAL DE PRODUCTOS QUE COMPRARON ANTES DE UNA RECOMENDACION
+LEFT JOIN (
+    SELECT 
+        h.clienteId,
+        COUNT(DISTINCT h.productoId) AS productos_no_recomendados,
+        CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_no_recomendados
+        -- SE UTILIZA LA MISMA LOGICA QUE EN EL SELECT DEL LEFT JOIN ANTERIOR PERO ESTA VEZ ES PARA OBTENER LOS QUE FUERON COMPRADOS SIN RECOMENDACION.
+    FROM 
+        HistorialClienteProducto h
+    LEFT JOIN 
+        ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
+    WHERE 
+        h.fecha <= pr.fechaRecomendacion OR pr.fechaRecomendacion IS NULL
+    GROUP BY 
+        h.clienteId
+) AS no_recomendados ON c.id = no_recomendados.clienteId
+ORDER BY 
+    c.CI;
