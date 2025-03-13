@@ -1,3 +1,148 @@
+-- Parte I
+--Consulta A
+SELECT 
+	te.*, 
+	Temp.CantidadUsos,
+	Temp.IngresosPorTipoEnvio,
+	Temp.ProporcionCantidadEnvios,
+	Temp.ProporcionIngresosTotal
+FROM TipoEnvio te JOIN
+
+	(	SELECT 
+		te.id, 
+		COUNT(oo.tipoEnvioId) AS CantidadUsos, 
+		SUM(f.montoTotal) AS IngresosPorTipoEnvio,
+		(COUNT(oo.tipoEnvioId) / (SELECT COUNT(oo.id)
+									FROM OrdenOnline oo
+								)) * 100 AS ProporcionCantidadEnvios,
+		(SUM(f.montoTotal) / (SELECT SUM(f.montoTotal)
+								FROM OrdenOnline oo 
+								JOIN Factura AS f ON oo.facturaId = f.id
+								GROUP BY f.id
+							)) * 100 AS ProporcionIngresosTotal
+
+		FROM TipoEnvio te 
+		JOIN OrdenOnline AS oo ON te.id = oo.tipoEnvioId
+		JOIN Factura AS f ON oo.facturaId = f.id
+		
+		GROUP BY te.id 
+	) AS Temp ON te.id = Temp.id
+
+	
+-- 	Consulta B
+SELECT 
+	c.nombre AS NombreCliente, 
+	ClienteTotalFisico.MontoTotalFisico AS TotalGastadoComprasFisicas, 
+	ClienteTotalOnline.MontoTotalOnline AS TotalGastadoComprasOnline, 
+	MetodoPagoPredilecto.nombre AS MetodoPagoPredilecto
+
+FROM 
+	Cliente c 
+	JOIN (
+        -- Obtengo el monto gastado en compras fisicas del cliente en la fecha actual
+		SELECT 
+			c1.id, 
+			SUM(f.montoTotal) AS MontoTotalFisico
+		
+		FROM VentaFisica vf 
+		JOIN Factura AS f ON vf.facturaId = f.id
+		JOIN Cliente AS c1 ON f.clienteId = c1.id
+		JOIN Pago AS p ON f.id = p.facturaId
+		
+		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
+		
+		GROUP BY c1.id
+	
+	) AS ClienteTotalFisico ON c.id = ClienteTotalFisico.id
+
+	JOIN 
+		(
+             -- Obtengo el monto gastado en compras online del cliente en la fecha actual
+		SELECT 
+			c1.id, 
+			SUM(f.montoTotal) AS MontoTotalOnline
+		
+		FROM OrdenOnline oo 
+		JOIN Factura AS f ON oo.facturaId = f.id
+		JOIN Cliente AS c1 ON f.clienteId = c1.id
+		JOIN Pago AS p ON f.id = p.facturaId
+		
+		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
+		
+		GROUP BY c1.id
+	
+	) AS ClienteTotalOnline ON c.id = ClienteTotalOnline.id
+	
+	JOIN(
+		SELECT 
+			fp.nombre, 
+			NombreFP.id
+		
+		FROM FormaPago AS fp
+
+        -- Join para obtener el nombre del metodo de pago
+		JOIN(
+	
+			SELECT 
+                -- Id del cliente, Id del metodo de pago mas usado
+				CantUsosMetodoPago.id, 
+				CantUsosMetodoPago.metodoPagoId AS IdMetodoMasUsado, 
+				MAX(CantUsosMetodoPago.UsosMetodoPago) AS maximo
+			
+			FROM (
+					SELECT 
+                     -- Id del cliente, junto a cuantas veces ha usado sus metodos de pago
+						c1.id, 
+						p.metodoPagoId, 
+						COUNT(p.metodoPagoId) AS UsosMetodoPago
+					
+					FROM Cliente c1
+					JOIN Factura AS f ON c1.id = f.clienteId
+					JOIN Pago AS p ON f.id = p.facturaId
+					JOIN FormaPago AS fp ON p.metodoPagoId = fp.id 
+		
+					GROUP BY c1.id, p.metodoPagoId
+					) AS CantUsosMetodoPago
+		
+			GROUP BY CantUsosMetodoPago.id, CantUsosMetodoPago.metodoPagoId
+			
+		) AS NombreFP ON fp.id = NombreFP.IdMetodoMasUsado
+		
+		
+	) AS MetodoPagoPredilecto ON c.id = MetodoPagoPredilecto.id
+
+
+-- Consulta C
+	
+	SELECT 
+		p.nombre AS NombreProducto,
+		c2.nombre AS Categoria,
+		m.nombre AS Marca
+	FROM Producto p 
+	JOIN ProductoRecomendadoParaCliente AS prpc ON p.id = prpc.productoRecomendadoId 
+	JOIN Cliente AS c ON prpc.clienteId = c.id
+	JOIN Categoria AS c2 ON p.categoriaId = c2.id 
+	JOIN Marca AS m ON p.marcaId = m.id
+	
+	WHERE c.id IN (SELECT 
+                    --Clientes que han comprado los productos en la fecha solicitada
+                    c.id
+					
+					FROM Cliente AS c
+					JOIN Factura AS f ON c.id = f.clienteId
+					WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) AND
+						  MONTH(f.fechaEmision) = MONTH(GETDATE()) 
+					) AND
+					
+	    p.id IN ( SELECT 
+                    -- Se verifica que el producto este en el carrito de algun cliente
+                    p.id
+
+				    FROM Producto AS p
+				    JOIN Carrito AS c ON p.id = c.productoId
+	)				
+	
+
 -- Parte II
 --- Consulta D
 SELECT DISTINCT

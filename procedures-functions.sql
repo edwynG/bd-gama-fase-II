@@ -1,4 +1,112 @@
 -- Implementacion de procedimientos
+-- Parte I
+-- Procedimiento A
+	/* Es necesario que se indique que tipo de envio se usara, asi como el metodo de pago */
+CREATE PROCEDURE SimularCompraOnline (@ClienteId INT, @MetodoPagoId INT, @TipoEnvioId INT, @Carrito INT)
+AS
+BEGIN
+	DECLARE @OrdenOnlineId INT;
+	DECLARE @NroOrden INT;
+	DECLARE @FacturaId INT;
+	DECLARE @SubTotal DECIMAL(10,2);
+	DECLARE @MontoDescuentoTotal DECIMAL(10,2);
+	DECLARE @PorcentajeIVA DECIMAL(5,2);
+	DECLARE @MontoIVA DECIMAL(10,2);
+	DECLARE @MontoTotal DECIMAL(10,2);
+	DECLARE @NroTransaccion INT;
+	
+	-- Datos Factura
+	SELECT @FacturaId = ISNULL(MAX(id),0) + 1
+	FROM Factura
+	
+	SET @SubTotal = dbo.subTotal(@FacturaId)
+	SET @MontoDescuentoTotal = dbo.montoDescuentoTotal(@FacturaId)
+	SET @PorcentajeIVA = 16
+	SET @MontoIVA = dbo.montoIVA(@FacturaId)
+	SET @MontoTotal = dbo.montoTotal(@FacturaId)
+	
+	-- Datos OrdenOnline
+	SELECT @OrdenOnlineId = ISNULL(MAX(id),0) + 1,
+		   @NroOrden = ISNULL(MAX(nroOrden),0) + 1  
+	FROM ordenOnline
+	
+	-- Datos Pago
+	
+	SELECT @NroTransaccion = ISNULL(MAX(nroTransaccion),0) + 1
+	FROM Pago
+	
+
+	
+-- INSERTS
+	
+	INSERT INTO OrdenOnline (id,clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+	VALUES (@OrdenOnlineId, @ClienteId, @NroOrden, GETDATE(), @TipoEnvioId, @FacturaId)
+	
+	INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
+	SELECT @OrdenOnlineId, productoId, cantidad, precioPor 
+	FROM Carrito
+	WHERE clienteId = @ClienteId
+	
+	INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
+	SELECT @FacturaId, productoId, cantidad, precioPor
+	FROM Carrito
+	WHERE clienteId = @ClienteId
+	
+	INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal )
+	VALUES (@FacturaId, GETDATE(), @ClienteId, @SubTotal, @MontoDescuentoTotal, @PorcentajeIVA, @MontoIVA, @MontoTotal)
+	
+	INSERT INTO Pago (facturaId, nroTransaccion, metodoPagoId)
+	VALUES (@FacturaId, @NroTransaccion, @MetodoPagoId)
+
+    
+	-- ACTUALIZAR EL INVENTARIO
+	
+	UPDATE Inventario
+	SET Inventario.cantidad = Inventario.cantidad - c.cantidad
+	FROM Inventario 
+	JOIN Carrito AS c ON Inventario.productoId = c.productoId
+	WHERE c.clienteId = @ClienteId 
+	
+END
+
+-- Procedimiento B
+CREATE PROCEDURE CompraProveedor (@ProveedorId INT, @ProductoId INT, @PrecioProducto DECIMAL(10,2), @Cantidad INT)
+AS
+BEGIN
+
+	DECLARE @IdProveedorProducto INT;
+	DECLARE @ComprobarCantidad INT;
+	DECLARE @IdInventario INT;
+	
+	SELECT @IdProveedorProducto = COALESCE(MAX(id),0) + 1
+	FROM ProveedorProducto
+	
+INSERT INTO ProveedorProducto (id, proveedorId, productoId, fechaCompra, precioPor, cantidad)
+VALUES (@IdProveedorProducto, @ProveedorId, @ProductoId, GETDATE(), @PrecioProducto, @Cantidad)
+
+-- Validar que el producto este en inventario
+	
+	SELECT @ComprobarCantidad = COALESCE(cantidad, 0)
+	FROM Inventario
+	WHERE productoId = @ProductoId
+	
+IF @ComprobarCantidad > 0
+BEGIN
+	UPDATE Inventario
+	SET cantidad = cantidad + @Cantidad
+	WHERE productoId = @ProductoId
+END
+	ELSE
+	BEGIN
+		SELECT @IdInventario = COALESCE(MAX(id), 0) + 1
+		FROM Inventario
+		
+		INSERT INTO Inventario (id, productoId, cantidad)
+		VALUES (@IdInventario, @ProductoId, @Cantidad)
+	END
+	
+END
+
 -- Parte II
 -- Procedimiento C Crear factura física dado un cliente y un empleado (esto creará también la relación VentaFisica).
 CREATE PROCEDURE CrearFacturaFisica
@@ -187,6 +295,148 @@ END;
 -- Implementacion de funciones
 -- Parte I
 --- Funcion A
+-- A.1
+-- costoEnvio
+CREATE FUNCTION costoEnvio (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @costo DECIMAL(10,2)
+
+    -- Verificar si la factura está asociada a una Orden Online
+    IF EXISTS (
+        SELECT 1
+        FROM OrdenOnline
+        WHERE facturaId = @facturaId
+    )
+    BEGIN
+        -- Si existe, obtener el costo del envío
+        SELECT @costo = te.costoEnvio
+        FROM OrdenOnline oo
+        JOIN TipoEnvio te ON oo.tipoEnviold = te.id
+        WHERE oo.facturaId = @facturaId
+    END
+    ELSE
+    BEGIN
+        -- Si no existe, el costo de envío es 0
+        SET @costo = 0.00
+    END
+
+    RETURN @costo
+END
+
+--montoDescuentoTotal
+
+CREATE FUNCTION montoDescuentoTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @montoDescuentoTotal DECIMAL(10,2) = 0;
+	
+	SELECT @montoDescuentoTotal = COALESCE(SUM(DescuentoEspecial.montoDescuentoEspecial) + SUM(p2.valorDescuento),SUM(DescuentoEspecial.montoDescuentoEspecial)) 
+			
+	FROM(
+		/* Obtengo el descuento que se le hace a cada producto individualmente */
+		
+	    SELECT COALESCE(p1.valorDescuento*fd.cantidad,0) AS montoDescuentoEspecial,
+	    		fd.facturaId
+	    FROM FacturaDetalle AS fd
+	    LEFT JOIN PromoEspecializada AS pe ON fd.productoId = pe.productoId   
+	    LEFT JOIN Promo AS p1 ON pe.promoId = p1.id 
+	    
+    )AS DescuentoEspecial 
+    LEFT JOIN FacturaPromo AS fp ON DescuentoEspecial.facturaId = fp.facturaId
+    LEFT JOIN Promo AS p2 ON fp.promoId = p2.id
+
+    WHERE DescuentoEspecial.facturaId = @facturaId
+    
+    
+    GROUP BY DescuentoEspecial.facturaId
+    RETURN @montoDescuentoTotal
+END
+
+
+
+-- montoIVA
+
+CREATE FUNCTION montoIVA (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS 
+BEGIN
+    DECLARE @montoIVA DECIMAL(10,2) = 0;
+	
+	/* Se resta el monto total del precio de todos los productos
+	   con el monto dado por todas las promos aplicadas sobre esa factura
+	   Adicionalmente se calcula de una vez el IVA */
+	SELECT @montoIVA = COALESCE(((SUM(Montos.montoPorGrupo) - SUM(p2.valorDescuento))*16)/100,(SUM(Montos.montoPorGrupo)*16)/100) 
+	FROM(
+		/*Obtenemos los precios con descuentos especializados por grupo de productos,
+		 por eso se multiplica por la cantidad*/
+		SELECT fd.facturaId, 
+	           COALESCE((fd.precioPor-p1.valorDescuento)*fd.cantidad,fd.precioPor*fd.cantidad) AS montoPorGrupo
+	                 
+	    FROM Producto AS p
+	    LEFT JOIN PromoEspecializada AS pe ON p.id = pe.productoId 
+	    LEFT JOIN Promo AS p1 ON pe.promoId = p1.id
+	    JOIN FacturaDetalle AS fd on p.id = fd.productoId
+	  	WHERE p.esExentoIVA = 0
+		) AS Montos
+		
+	LEFT JOIN FacturaPromo AS fp ON Montos.facturaId = fp.facturaId
+	LEFT JOIN Promo AS p2 ON fp.promoId = p2.id
+	
+	WHERE Montos.facturaId = @FacturaId 
+	GROUP BY Montos.facturaId
+
+    RETURN @montoIVA
+END
+
+-- montoTotal
+CREATE FUNCTION montoTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subTotal DECIMAL(10,2)
+    DECLARE @montoDescuentoTotal DECIMAL(10,2)
+    DECLARE @montoIVA DECIMAL(10,2)
+    DECLARE @costoEnvio DECIMAL(10,2)
+    DECLARE @total DECIMAL(10,2)
+
+    -- Obtener los valores utilizando las funciones existentes
+    SET @subTotal = dbo.subTotal(@facturaId)
+    SET @montoDescuentoTotal = dbo.montoDescuentoTotal(@facturaId)
+    SET @montoIVA = dbo.montoIVA(@facturaId)
+    SET @costoEnvio = dbo.costoEnvio(@facturaId)
+
+    -- Calcular el monto total
+    SET @total = (@subTotal - @montoDescuentoTotal) + @montoIVA + @costoEnvio
+
+    RETURN @total
+END
+
+-- subTotal
+
+CREATE FUNCTION subTotal (@facturaId INT)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+    DECLARE @subtotal DECIMAL(10,2)
+
+    -- Obtener el subtotal directamente de la tabla Factura
+    SELECT @subtotal = subTotal
+    FROM Factura
+    WHERE id = @facturaId
+
+    -- Si no se encuentra la factura, el subtotal es 0
+    IF @subtotal IS NULL
+    BEGIN
+        SET @subtotal = 0.00
+    END
+
+    RETURN @subtotal
+END
+
+--- A.2
 -- costoEnvio
 CREATE FUNCTION costoEnvio (@facturaId INT)
 RETURNS DECIMAL(10,2)

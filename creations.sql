@@ -749,3 +749,18 @@ BEGIN
     INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
     VALUES (@facturaId, @productoId, @cantidad, @precioPor);
 END;
+
+-- Parte III 
+-- Trigger E
+   CREATE TRIGGER RestoreStock
+  ON FacturaDetalle
+  AFTER DELETE 
+  AS 
+  BEGIN
+
+    UPDATE i
+    SET i.cantidad = i.cantidad + d.cantidad
+    FROM Inventario i, deleted d
+    WHERE i.productoId = d.productoId;
+
+END;
