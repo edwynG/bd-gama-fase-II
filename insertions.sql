@@ -1,4 +1,3 @@
--- Inserciones
 --TipoEnvio
 INSERT INTO TipoEnvio (id, nombreEnvio, tiempoEstimadoEntrega, costoEnvio) VALUES
 (1, 'Envio inmediato', 1, 50.00),
@@ -81,8 +80,6 @@ INSERT INTO Marca (id, nombre, descripcion) VALUES
 (38, 'Chips Ahoy!', 'Galletas y snacks'),
 (39, 'Pasta de diente Sensodyne', 'Productos de higiene bucal'),
 (40, 'Gama', 'Productos para el hogar');
-
-
 
 -- Categoria
 INSERT INTO Categoria (id, nombre, descripcion) VALUES
@@ -916,3 +913,121 @@ INSERT INTO Promo (id, nombre, slogan, codigo, tipoDescuento, valorDescuento, fe
 (39, 'Promo Gama', 'Descuento en detergente Gama', 1039, 'Fijo', 1.00, '2025-03-01', '2025-03-31', 'Fisica'),
 (40, 'Promo Coca-Cola Zero', 'Coca-Cola Zero a precio especial', 1040, 'Porcentaje', 15.00, '2025-04-01', '2025-04-30', 'Ambos'),
 (41, 'Verano en Gama', 'Descuento especial de verano en productos Gama', 1041, 'Porcentaje', 20.00, '2025-06-01', '2025-08-31', 'Ambos');
+
+-- 25% de los clientes deben tener al menos 1 producto en el carrito.
+INSERT INTO Carrito (clienteId, productoId, fechaAgregado, cantidad, precioPor) VALUES 
+(1, 1, '2025-02-02', 2, 1.50),
+(2, 2, '2025-02-03', 1, 1.50),
+(3, 3, '2025-02-04', 3, 1.00),
+(4, 4, '2025-02-05', 1, 3.50),
+(5, 5, '2025-02-06', 4, 2.50),
+(6, 6, '2025-02-07', 2, 2.00),
+(7, 7, '2025-02-08', 5, 1.75),
+(8, 8, '2025-02-09', 3, 1.25),
+(9, 9, '2025-02-10', 2, 3.00),
+(10, 10, '2025-02-11', 1, 1.75),
+(11, 11, '2025-02-12', 3, 2.00),
+(12, 12, '2025-02-13', 2, 1.25),
+(13, 13, '2025-02-14', 4, 2.00),
+(14, 14, '2025-02-15', 1, 1.50),
+(15, 15, '2025-02-16', 3, 1.00),
+(16, 16, '2025-02-17', 2, 2.00),
+(17, 17, '2025-02-18', 5, 1.00),
+(18, 18, '2025-02-19', 2, 3.50),
+(19, 19, '2025-02-20', 1, 1.50),
+(20, 20, '2025-02-21', 4, 1.50),
+(21, 21, '2025-02-22', 2, 2.50),
+(22, 22, '2025-02-23', 3, 3.00),
+(23, 23, '2025-02-24', 1, 2.50),
+(24, 24, '2025-02-25', 5, 3.00),
+(25, 25, '2025-02-26', 2, 2.00);
+
+-- 40 recomendaciones en las tabla de recomendaciones.
+
+-- Tabla de ProductoRecomendadoParaProducto.
+
+INSERT INTO ProductoRecomendadoParaProducto (productoId, productoRecomendadoId, mensaje) VALUES
+(1, 2, 'Si te gusta la Coca-Cola, también deberías probar Pepsi.'),
+(2, 1, 'Si prefieres Pepsi, no te pierdas Coca-Cola.'),
+(2, 42, 'Pepsi 2L es ideal para fiestas y reuniones.'),
+(3, 4, 'Combina Nestle Pure Life con Unilever Shampoo para un día de spa en casa.'),
+(3, 6, 'Acompaña tu agua con un delicioso yogurt Danone.'),
+(4, 8, 'Usa Colgate Pasta Dental después de disfrutar de Unilever Shampoo.'),
+(4, 30, 'Dove Jabón es perfecto para complementar tu rutina de cuidado personal.'),
+(5, 10, 'Kelloggs Corn Flakes va muy bien con leche La Serenisima.'),
+(5, 11, 'Prueba Bimbo Pan Blanco con tus cereales para un desayuno completo.'),
+(6, 3, 'Un yogurt Danone es un excelente complemento para tu agua mineral.'),
+(6, 12, 'Acompaña tu yogurt con galletas Oreo para un snack delicioso.'),
+(7, 9, 'Heinz Ketchup es ideal para acompañar tus papas fritas.'),
+(7, 10, 'No olvides las Lays Papas Fritas para un aperitivo perfecto.'),
+(8, 39, 'Colgate Pasta Dental es esencial para una buena higiene bucal.'),
+(9, 40, 'P&G Detergente es perfecto para mantener tu ropa limpia.'),
+(10, 11, 'Lays Papas Fritas son el snack ideal para acompañar tu pan.'),
+(11, 12, 'La Serenisima Leche es perfecta para tus desayunos con pan.'),
+(12, 13, 'Combina leche con galletas para un delicioso postre.'),
+(13, 14, 'Quilmes Cerveza es ideal para disfrutar con caramelos Arcor.'),
+(14, 28, 'Prueba Arcor Caramelos con un chocolate Cadbury para un dulce momento.'),
+(15, 29, 'Molinos Harina es perfecta para hacer fideos caseros.'),
+(16, 38, 'Mondelez Galletas son un excelente acompañante para tu café.'),
+(17, 19, 'Knorr Sopa es ideal para un almuerzo ligero con Fanta.'),
+(18, 6, 'Natura Crema es perfecta para hidratar tu piel después de un baño.'),
+(19, 20, 'Fanta combina bien con Sprite para un refresco variado.'),
+(20, 21, 'Red Bull es ideal para mantenerte activo durante el día.'),
+(21, 22, 'Monster es una excelente opción para un impulso extra de energía.'),
+(22, 21, 'Prueba Red Bull con un snack para un día lleno de energía.'),
+(23, 24, 'Starbucks Café es perfecto para acompañar tus galletas.'),
+(24, 64, 'Nescafé es ideal para disfrutar con un buen desayuno.'),
+(25, 26, 'Tropicana Jugo es un excelente complemento para tus comidas.'),
+(26, 27, 'Gatorade es ideal para rehidratarte después de hacer ejercicio.'),
+(27, 28, 'Oreo Galletas son perfectas para disfrutar con un café.'),
+(28, 32, 'Cadbury Chocolate es ideal para un antojo dulce.'),
+(29, 30, 'Pillsbury Harina es perfecta para hacer deliciosos postres.'),
+(30, 31, 'Dove Jabón es ideal para mantener tu piel suave y limpia.'),
+(31, 4, 'L Oreal Shampoo es perfecto para un cuidado capilar completo.'),
+(32, 33, 'Nestle Chocolate es ideal para disfrutar con galletas.'),
+(33, 34, 'Delicius Galletas son perfectas para un snack en cualquier momento.'),
+(34, 35, 'GanadoGas Carne es ideal para una cena especial.');
+
+-- Inserts para la tabla ProductoRecomendadoParaCliente
+
+INSERT INTO ProductoRecomendadoParaCliente (clienteId, productoRecomendadoId, fechaRecomendacion, mensaje) VALUES
+(1, 1, '2025-02-02', '¡Juan! Disfruta de una Coca-Cola bien fría en tu próxima reunión.'),
+(2, 14, '2025-02-03', '¡María! Sabemos que te gustan las galletas, prueba estas Oreo.'),
+(3, 3, '2025-02-04', '¡Carlos! Combina Nestle Pure Life con un delicioso yogur Danone para un snack perfecto.'),
+(4, 4, '2025-02-05', '¡Ana! Usa Colgate Pasta Dental para mantener esa sonrisa brillante después de tus comidas.'),
+(5, 6, '2025-02-06', '¡Luis! Complementa tu desayuno con Kelloggs Corn Flakes y leche La Serenisima.'),
+(6, 12, '2025-02-07', '¡Laura! Acompaña tu agua con unas deliciosas galletas Oreo para un snack perfecto.'),
+(7, 9, '2025-02-08', '¡Jorge! No olvides el Heinz Ketchup para tus papas fritas, ¡es un clásico!'),
+(8, 10, '2025-02-09', '¡Sofía! Las Lays Papas Fritas son el complemento ideal para tu película de esta noche.'),
+(9, 8, '2025-02-10', '¡Andrés! Mantén tu higiene bucal con Colgate Pasta Dental, ¡esencial para todos los días!'),
+(10, 11, '2025-02-11', '¡Isabel! Prueba la La Serenisima Leche con tu café para un desayuno delicioso.'),
+(11, 19, '2025-02-12', '¡Fernando! El P&G Detergente es perfecto para mantener tu ropa siempre limpia.'),
+(12, 13, '2025-02-13', '¡Patricia! Disfruta de Quilmes Cerveza en tu próxima barbacoa.'),
+(13, 14, '2025-02-14', '¡Diego! Prueba los caramelos Arcor con un chocolate Cadbury para un dulce momento.'),
+(14, 15, '2025-02-15', '¡Claudia! Usa Molinos Harina para hacer unos fideos caseros deliciosos.'),
+(15, 38, '2025-02-16', '¡Ricardo! Las galletas Mondelez son un excelente acompañante para tu café.'),
+(16, 17, '2025-02-17', '¡Verónica! La sopa Knorr es ideal para un almuerzo ligero y reconfortante.'),
+(17, 18, '2025-02-18', '¡Samuel! No te olvides de usar Natura Crema para hidratar tu piel.'),
+(18, 20, '2025-02-19', '¡Gabriela! Combina Fanta con Sprite para un refresco refrescante y divertido.'),
+(19, 21, '2025-02-20', '¡Alberto! Red Bull es ideal para mantenerte activo durante el día.'),
+(20, 22, '2025-02-21', '¡Natalia! Monster es una excelente opción para esos días de mucho trabajo.'),
+(21, 23, '2025-02-22', '¡Javier! Prueba Starbucks Café para acompañar tus galletas favoritas.'),
+(22, 24, '2025-02-23', '¡Lucía! Nescafé es ideal para disfrutar con un buen desayuno por la mañana.'),
+(23, 25, '2025-02-24', '¡Esteban! Tropicana Jugo es un excelente complemento para tus comidas.'),
+(24, 26, '2025-02-25', '¡Carla! Gatorade es ideal para rehidratarte después de tus ejercicios.'),
+(25, 27, '2025-02-26', '¡Fernando! Las Oreo Galletas son perfectas para tus tardes de café.'),
+(26, 28, '2025-02-27', '¡Mariana! Cadbury Chocolate es ideal para satisfacer tu antojo dulce.'),
+(27, 29, '2025-02-28', '¡Santiago! Usa Pillsbury Harina para hacer unos deliciosos postres.'),
+(28, 30, '2025-03-01', '¡Valentina! Dove Jabón es ideal para mantener tu piel suave y limpia.'),
+(29, 31, '2025-03-02', '¡Diego! El L Oreal Shampoo es perfecto para cuidar tu cabello.'),
+(30, 32, '2025-03-04', '¡Sofía! Nestle Chocolate es ideal para disfrutar con galletas.'),
+(31, 33, '2025-03-05', '¡Pablo! Delicius Galletas son perfectas para un snack en cualquier momento.'),
+(32, 34, '2025-03-06', '¡Ana! GanadoGas Carne es ideal para una cena especial con amigos.'),
+(33, 35, '2025-03-07', '¡Luis! Under Armour Cerveza es perfecta para disfrutar en una reunión.'),
+(34, 36, '2025-03-08', '¡Claudia! Haagen-Dazs Helado es el postre perfecto para cualquier ocasión.'),
+(35, 37, '2025-03-09', '¡Ricardo! Saludela Granola es ideal para un desayuno saludable y energético.'),
+(36, 38, '2025-03-10', '¡Gabriela! Chips Ahoy! Galletas son perfectas para disfrutar con leche.'),
+(37, 39, '2025-03-11', '¡Andrés! Sensodyne Pasta Dental es esencial para una buena higiene bucal.'),
+(38, 40, '2025-03-12', '¡Natalia! Gama Detergente es ideal para mantener tu ropa limpia y fresca.'),
+(39, 41, '2025-03-13', '¡Fernando! Disfruta de una buena Coca-Cola en tu próxima reunión familiar.'),
+(40, 42, '2025-03-14', '¡Lucía! La Pepsi 2L es perfecta para compartir en tus fiestas.'); 

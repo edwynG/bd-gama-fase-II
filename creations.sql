@@ -1,51 +1,76 @@
 -- Creacion de tablas
-
 -- Este script de SQL Server es para eliminar todas las restricciones de clave foráneas de las tablas para poder eliminarlas si existen
 -- Este algoritmo es solo para usarlo en desarrollo, por lo que no estoy seguro si podemos enviar el proyecto junto con este script, en caso de que no se pueda, simplemente se eliminara antes de enviarlo.
 
 -- NOTA: La utilidad de este script, es para poder aplicar cambios a las tablas sin tener que eliminarlas manualmente y crearlas de nuevo.
-
 -- Inicia script
 DECLARE @sql NVARCHAR(MAX) = N'';
 
-SELECT @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id)) + 
-                ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
-FROM sys.foreign_keys
-
-EXEC sp_executesql @sql;
+SELECT
+    @sql + = 'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id)) + ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+FROM
+    sys.foreign_keys EXEC sp_executesql @sql;
 
 -- En caso de que existan las tablas se eliminan
 DROP TABLE IF EXISTS Marca;
-DROP TABLE IF EXISTS Categoria;
-DROP TABLE IF EXISTS Cliente;
-DROP TABLE IF EXISTS ClienteDireccion;
-DROP TABLE IF EXISTS Producto;
-DROP TABLE IF EXISTS ProductoRecomendadoParaProducto;
-DROP TABLE IF EXISTS ProductoRecomendadoParaCliente;
-DROP TABLE IF EXISTS TipoEnvio;
-DROP TABLE IF EXISTS HistorialClienteProducto;
-DROP TABLE IF EXISTS Carrito;
-DROP TABLE IF EXISTS FormaPago;
-DROP TABLE IF EXISTS Factura;
-DROP TABLE IF EXISTS FacturaDetalle;
-DROP TABLE IF EXISTS Pago;
-DROP TABLE IF EXISTS OrdenOnline;
-DROP TABLE IF EXISTS OrdenDetalle;
-DROP TABLE IF EXISTS Pais;
-DROP TABLE IF EXISTS Estado;
-DROP TABLE IF EXISTS Ciudad;
-DROP TABLE IF EXISTS Promo;
-DROP TABLE IF EXISTS PromoEspecializada;
-DROP TABLE IF EXISTS FacturaPromo;
-DROP TABLE IF EXISTS Sucursal;
-DROP TABLE IF EXISTS Cargo;
-DROP TABLE IF EXISTS Empleado;
-DROP TABLE IF EXISTS Inventario;
-DROP TABLE IF EXISTS Proveedor;
-DROP TABLE IF EXISTS ProveedorProducto;
-DROP TABLE IF EXISTS VentaFisica;
--- fin del script
 
+DROP TABLE IF EXISTS Categoria;
+
+DROP TABLE IF EXISTS Cliente;
+
+DROP TABLE IF EXISTS ClienteDireccion;
+
+DROP TABLE IF EXISTS Producto;
+
+DROP TABLE IF EXISTS ProductoRecomendadoParaProducto;
+
+DROP TABLE IF EXISTS ProductoRecomendadoParaCliente;
+
+DROP TABLE IF EXISTS TipoEnvio;
+
+DROP TABLE IF EXISTS HistorialClienteProducto;
+
+DROP TABLE IF EXISTS Carrito;
+
+DROP TABLE IF EXISTS FormaPago;
+
+DROP TABLE IF EXISTS Factura;
+
+DROP TABLE IF EXISTS FacturaDetalle;
+
+DROP TABLE IF EXISTS Pago;
+
+DROP TABLE IF EXISTS OrdenOnline;
+
+DROP TABLE IF EXISTS OrdenDetalle;
+
+DROP TABLE IF EXISTS Pais;
+
+DROP TABLE IF EXISTS Estado;
+
+DROP TABLE IF EXISTS Ciudad;
+
+DROP TABLE IF EXISTS Promo;
+
+DROP TABLE IF EXISTS PromoEspecializada;
+
+DROP TABLE IF EXISTS FacturaPromo;
+
+DROP TABLE IF EXISTS Sucursal;
+
+DROP TABLE IF EXISTS Cargo;
+
+DROP TABLE IF EXISTS Empleado;
+
+DROP TABLE IF EXISTS Inventario;
+
+DROP TABLE IF EXISTS Proveedor;
+
+DROP TABLE IF EXISTS ProveedorProducto;
+
+DROP TABLE IF EXISTS VentaFisica;
+
+-- fin del script
 -- CREAMOS LA TABLA MARCA
 CREATE TABLE Marca (
     id INT PRIMARY KEY,
@@ -175,7 +200,7 @@ CREATE TABLE FacturaDetalle (
     facturaId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     FOREIGN KEY (facturaId) REFERENCES Factura(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -209,7 +234,7 @@ CREATE TABLE OrdenDetalle (
     ordenId INT,
     productoId INT,
     cantidad INT CHECK (cantidad >= 0),
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     FOREIGN KEY (ordenId) REFERENCES OrdenOnline(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
 );
@@ -338,7 +363,7 @@ CREATE TABLE ProveedorProducto (
     proveedorId INT,
     productoId INT,
     fechaCompra DATE,
-    precioPor DECIMAL(10, 2) CHECK (precioPor >= 0),
+    precioPor DECIMAL (10,2) CHECK (precioPor >= 0),
     cantidad INT CHECK (cantidad >= 0),
     FOREIGN KEY (proveedorId) REFERENCES Proveedor(id),
     FOREIGN KEY (productoId) REFERENCES Producto(id)
@@ -598,4 +623,129 @@ BEGIN
     SET p.precioPor =  i.precioPor + (i.precioPor * 0.30)  -- Aumentar el precio de compra en un 30%
     FROM Producto p
     JOIN inserted i ON p.id = i.productoId;  -- Solo actualizar los productos que fueron comprados
+END;
+
+-- Parte II
+--- Trigger C
+-- Al insertar datos en FacturaPromo: llama al verificador de promo válida y acepta el registro o no.
+CREATE TRIGGER TR_FacturaPromo_VerificarPromocion
+ON FacturaPromo
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @facturaId INT, @promoId INT, @tipoPromocion VARCHAR(50), @tipoCompra VARCHAR(50), @fechaActual DATE;
+
+    -- Obtener los valores de la fila insertada
+    SELECT @facturaId = facturaId, @promoId = promoId FROM inserted;
+
+    -- Inicializar la fecha actual
+    SET @fechaActual = GETDATE();
+
+    -- Determinar el tipo de compra
+    SELECT @tipoCompra =
+        CASE
+            WHEN EXISTS (SELECT 1 FROM OrdenOnline WHERE facturaId = @facturaId) THEN 'Online'
+            WHEN EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId) THEN 'Física'
+            ELSE NULL  -- Manejar el caso en que no se encuentra en ninguna tabla
+        END;
+
+    -- Verificar si la promoción es válida y obtener el tipo de promoción en una sola consulta
+    SELECT @tipoPromocion = tipoPromocion
+    FROM Promo
+    WHERE id = @promoId
+      AND @fechaActual BETWEEN fechaInicio AND fechaFin
+      AND (
+          (@tipoCompra = 'Online' AND (tipoPromocion = 'Online' OR tipoPromocion = 'Ambos')) OR
+          (@tipoCompra = 'Física' AND (tipoPromocion = 'Física' OR tipoPromocion = 'Ambos'))
+      );
+
+    -- Si la promoción no es válida, lanzar un error y cancelar la inserción
+    IF @tipoPromocion IS NULL
+    BEGIN
+        RAISERROR('La promoción no es válida para el tipo de compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    ELSE
+    BEGIN
+        -- Si la promoción es válida, insertar el registro
+        INSERT INTO FacturaPromo (facturaId, promoId)
+        VALUES (@facturaId, @promoId);
+    END
+END;
+
+-- TRIGGER D
+-- Verificar cantidad de Stock para OrdenOnline y para VentaFisica
+
+-- Trigger encargado de verificar Stock para OrdenDetalle(OrdenOnline).
+CREATE TRIGGER TR_OrdenDetalle_ValidarStock
+ON OrdenDetalle
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor DECIMAL (10,2);
+
+    -- Obtener los valores de la fila insertada
+    SELECT @ordenId = ordenId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
+
+    -- Verificar el inventario general para OrdenOnline
+    SELECT @stockDisponible = cantidad
+    FROM Inventario
+    WHERE productoId = @productoId;
+
+    -- Validar stock
+    IF @stockDisponible IS NULL OR @stockDisponible = 0
+    BEGIN
+        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    ELSE IF @stockDisponible < @cantidad
+    BEGIN
+        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- Si hay stock suficiente, insertar el registro
+    INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
+    VALUES (@ordenId, @productoId, @cantidad, @precioPor);
+END;
+
+--Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica).
+CREATE TRIGGER TR_FacturaDetalle_ValidarStock
+ON FacturaDetalle
+INSTEAD OF INSERT
+AS
+BEGIN
+    -- Declarar variables para almacenar los valores de la fila
+    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor DECIMAL (10,2);
+
+    -- Obtener los valores de la fila insertada
+    SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
+
+    -- Verificar el inventario del producto que se quiere insertar a la factura
+    SELECT @stockDisponible = cantidad
+    FROM Inventario
+    WHERE productoId = @productoId;
+
+    -- Validar stock
+    IF @stockDisponible IS NULL OR @stockDisponible = 0
+    BEGIN
+        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+    ELSE IF @stockDisponible < @cantidad
+    BEGIN
+        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
+
+    -- Si hay stock suficiente, insertar el registro
+    INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
+    VALUES (@facturaId, @productoId, @cantidad, @precioPor);
 END;
