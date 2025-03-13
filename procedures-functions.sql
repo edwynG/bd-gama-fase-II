@@ -158,22 +158,22 @@ BEGIN
 	DECLARE @OrdenOnlineId INT;
 	DECLARE @NroOrden INT;
 	DECLARE @FacturaId INT;
-	DECLARE @SubTotal INT;
-	DECLARE @MontoDescuentoTotal INT;
-	DECLARE @PorcentajeIVA INT;
-	DECLARE @MontoIVA INT;
-	DECLARE @MontoTotal INT;
+	DECLARE @SubTotal DECIMAL(10,2);
+	DECLARE @MontoDescuentoTotal DECIMAL(10,2);
+	DECLARE @PorcentajeIVA DECIMAL(5,2);
+	DECLARE @MontoIVA DECIMAL(10,2);
+	DECLARE @MontoTotal DECIMAL(10,2);
 	DECLARE @NroTransaccion INT;
 	
 	-- Datos Factura
 	SELECT @FacturaId = ISNULL(MAX(id),0) + 1
 	FROM Factura
 	
-	SET @SubTotal = subTotal(@FacturaId)
-	SET @MontoDescuentoTotal = montoDescuentoTotal(@FacturaId)
+	SET @SubTotal = dbo.subTotal(@FacturaId)
+	SET @MontoDescuentoTotal = dbo.montoDescuentoTotal(@FacturaId)
 	SET @PorcentajeIVA = 16
-	SET @MontoIVA = montoIVA(@FacturaId)
-	SET @MontoTotal = montoTotal(@FacturaId)
+	SET @MontoIVA = dbo.montoIVA(@FacturaId)
+	SET @MontoTotal = dbo.montoTotal(@FacturaId)
 	
 	-- Datos OrdenOnline
 	SELECT @OrdenOnlineId = ISNULL(MAX(id),0) + 1,
@@ -190,7 +190,7 @@ BEGIN
 -- INSERTS
 	
 	INSERT INTO OrdenOnline (id,clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
-	VALUES (@OrdenOnlineId, @ClienteId, @NroOrden, CURDATE(), @TipoEnvioId, @FacturaId)
+	VALUES (@OrdenOnlineId, @ClienteId, @NroOrden, GETDATE(), @TipoEnvioId, @FacturaId)
 	
 	INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
 	SELECT @OrdenOnlineId, productoId, cantidad, precioPor 
@@ -203,24 +203,64 @@ BEGIN
 	WHERE clienteId = @ClienteId
 	
 	INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal )
-	VALUES (@FacturaId, CURDATE(), @ClienteId, @SubTotal, @MontoDescuentoTotal, @PorcentajeIVA, @MontoIVA, @MontoTotal)
+	VALUES (@FacturaId, GETDATE(), @ClienteId, @SubTotal, @MontoDescuentoTotal, @PorcentajeIVA, @MontoIVA, @MontoTotal)
 	
-	INSERT INTO Pago (facturaId, nroTransaccion, medotoPagoId)
+	INSERT INTO Pago (facturaId, nroTransaccion, metodoPagoId)
 	VALUES (@FacturaId, @NroTransaccion, @MetodoPagoId)
 
     
 	-- ACTUALIZAR EL INVENTARIO
 	
 	UPDATE Inventario
-	SET i.cantidad = i.cantidad - c.cantidad
-	FROM Inventario AS i
-	JOIN Carrito AS c ON i.productoId = c.productoId
+	SET Inventario.cantidad = Inventario.cantidad - c.cantidad
+	FROM Inventario 
+	JOIN Carrito AS c ON Inventario.productoId = c.productoId
 	WHERE c.clienteId = @ClienteId 
 	
 	
 	
 END
 
+-- PROCEDIMIENTO B
+
+/*  Simular compra a proveedor dado un proveedor, producto, precio y cantidad. */
+
+CREATE PROCEDURE CompraProveedor (@ProveedorId INT, @ProductoId INT, @PrecioProducto DECIMAL(10,2), @Cantidad INT)
+AS
+BEGIN
+
+	DECLARE @IdProveedorProducto INT;
+	DECLARE @ComprobarCantidad INT;
+	DECLARE @IdInventario INT;
+	
+	SELECT @IdProveedorProducto = COALESCE(MAX(id),0) + 1
+	FROM ProveedorProducto
+	
+INSERT INTO ProveedorProducto (id, proveedorId, productoId, fechaCompra, precioPor, cantidad)
+VALUES (@IdProveedorProducto, @ProveedorId, @ProductoId, GETDATE(), @PrecioProducto, @Cantidad)
+
+-- Validar que el producto este en inventario
+	
+	SELECT @ComprobarCantidad = COALESCE(cantidad, 0)
+	FROM Inventario
+	WHERE productoId = @ProductoId
+	
+IF @ComprobarCantidad > 0
+BEGIN
+	UPDATE Inventario
+	SET cantidad = cantidad + @Cantidad
+	WHERE productoId = @ProductoId
+END
+	ELSE
+	BEGIN
+		SELECT @IdInventario = COALESCE(MAX(id), 0) + 1
+		FROM Inventario
+		
+		INSERT INTO Inventario (id, productoId, cantidad)
+		VALUES (@IdInventario, @ProductoId, @Cantidad)
+	END
+	
+END
 
 
 -- PROCEDIMIENTOS PARTE II
