@@ -95,6 +95,13 @@ BEGIN
                 precioPor
             FROM OrdenDetalle
             WHERE ordenId = @id;
+
+            UPDATE Factura 
+			SET subTotal = dbo.subTotal(@facturaId), 
+				montoDescuentoTotal = dbo.montoDescuentoTotal(@facturaId),
+				montoIVA = dbo.montoIVA(@facturaId),
+				montoTotal = dbo.montoTotal(@facturaId)
+			WHERE id = @facturaId;
         END
         ELSE
         BEGIN
@@ -162,6 +169,13 @@ BEGIN
                 precioPor
             FROM Producto
             ORDER BY NEWID();
+
+            UPDATE Factura 
+			SET subTotal = dbo.subTotal(@facturaId), 
+				montoDescuentoTotal = dbo.montoDescuentoTotal(@facturaId),
+				montoIVA = dbo.montoIVA(@facturaId),
+				montoTotal = dbo.montoTotal(@facturaId)
+			WHERE id = @facturaId;
         END
 
         -- Insertar la venta física
