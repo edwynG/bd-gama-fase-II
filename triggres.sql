@@ -97,7 +97,7 @@ BEGIN
         BEGIN
             -- Crear la factura
             INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
-            VALUES (@facturaId, GETDATE(), @clienteId, 0, 16, 0, 0, 0);
+            VALUES (@facturaId, GETDATE(), @clienteId, 0, 0, 16, 0, 0);
 
             -- Insertar la orden online
             INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
@@ -189,7 +189,7 @@ BEGIN
             SELECT TOP 1 @randomClienteId = id FROM Cliente ORDER BY NEWID();
 
             INSERT INTO Factura (id, fechaEmision, clienteId, subTotal, montoDescuentoTotal, porcentajeIVA, montoIVA, montoTotal)
-            VALUES (@facturaId, GETDATE(), @randomClienteId, 0, 16, 0, 0, 0);
+            VALUES (@facturaId, GETDATE(), @randomClienteId, 0, 0, 16, 0, 0);
 
             -- Insertar al menos 3 productos aleatorios en FacturaDetalle
             INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
