@@ -21,7 +21,7 @@ BEGIN
         INSERT (id, productoId, cantidad)
         VALUES (@nuevoId,source.productoId, source.totalCantidad);
 END;
-
+GO
 -- A.2
 -- Orden Online
 CREATE TRIGGER CreateInvoiceOnlineOrder
@@ -109,6 +109,7 @@ BEGIN
     CLOSE cur;
     DEALLOCATE cur;
 END;
+GO
 
 -- Compra Fisica
 CREATE TRIGGER CreateInvoicePhysicalSale
@@ -173,7 +174,7 @@ BEGIN
     CLOSE cur;
     DEALLOCATE cur;
 END;
-
+GO
 -- A.3
 -- Agregan al carrito
 CREATE TRIGGER addCartToHistory
@@ -185,7 +186,7 @@ BEGIN
     INSERT INTO HistorialClienteProducto(clienteId, productoId, fecha, tipoAccion)
     SELECT clienteId, productoId, fechaAgregado, @tipo FROM inserted 
 END;
-
+GO
 -- Compran un producto
 CREATE TRIGGER addInvoiceToHistory
 ON FacturaDetalle
@@ -203,6 +204,7 @@ BEGIN
     ) AS Compra 
 
 END;
+GO
 
 -- A.4
 CREATE TRIGGER recommendProductsToClient
@@ -229,6 +231,7 @@ BEGIN
         GROUP BY frecuentes.clienteId, pr.productoRecomendadoId
     ) as Recomendados
 END;
+GO
 
 -- Trigger B
 CREATE TRIGGER updatePriceProduct
@@ -242,6 +245,7 @@ BEGIN
     FROM Producto p
     JOIN inserted i ON p.id = i.productoId;  -- Solo actualizar los productos que fueron comprados
 END;
+GO
 
 -- Parte II
 --- Trigger C
@@ -292,6 +296,7 @@ BEGIN
         VALUES (@facturaId, @promoId);
     END
 END;
+GO
 
 -- TRIGGER D
 -- Verificar cantidad de Stock para OrdenOnline y para VentaFisica
@@ -331,6 +336,7 @@ BEGIN
     INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
     VALUES (@ordenId, @productoId, @cantidad, @precioPor);
 END;
+GO
 
 --Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica).
 CREATE TRIGGER TR_FacturaDetalle_ValidarStock
@@ -367,6 +373,7 @@ BEGIN
     INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
     VALUES (@facturaId, @productoId, @cantidad, @precioPor);
 END;
+GO
 
 -- Parte III 
 -- Trigger E
@@ -382,3 +389,4 @@ END;
     WHERE i.productoId = d.productoId;
 
 END;
+GO

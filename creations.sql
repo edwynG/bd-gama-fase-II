@@ -10,7 +10,7 @@ SELECT
     @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_NAME(parent_object_id)) + ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
 FROM
     sys.foreign_keys EXEC sp_executesql @sql;
-
+GO
 -- En caso de que existan las tablas se eliminan
 DROP TABLE IF EXISTS Marca;
 

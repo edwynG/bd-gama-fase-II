@@ -35,8 +35,6 @@ BEGIN
 	SELECT @NroTransaccion = ISNULL(MAX(nroTransaccion),0) + 1
 	FROM Pago
 	
-
-	
 -- INSERTS
 	
 	INSERT INTO OrdenOnline (id,clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
@@ -58,7 +56,6 @@ BEGIN
 	INSERT INTO Pago (facturaId, nroTransaccion, metodoPagoId)
 	VALUES (@FacturaId, @NroTransaccion, @MetodoPagoId)
 
-    
 	-- ACTUALIZAR EL INVENTARIO
 	
 	UPDATE Inventario
@@ -68,6 +65,7 @@ BEGIN
 	WHERE c.clienteId = @ClienteId 
 	
 END
+GO
 
 -- Procedimiento B
 CREATE PROCEDURE CompraProveedor (@ProveedorId INT, @ProductoId INT, @PrecioProducto DECIMAL(10,2), @Cantidad INT)
@@ -106,6 +104,7 @@ END
 	END
 	
 END
+GO
 
 -- Parte II
 -- Procedimiento C Crear factura física dado un cliente y un empleado (esto creará también la relación VentaFisica).
@@ -163,6 +162,7 @@ BEGIN
     PRINT 'Factura y VentaFisica Creados correctamente.';
 
 END
+GO
 
 -- PROCEDIMIENTO D Agregar producto a factura física dada una factura, producto, cantidad y precio.
 
@@ -193,6 +193,7 @@ BEGIN
         RAISERROR('La factura no corresponde a una venta física.', 16, 1);
     END
 END;
+GO
 
 -- Parte III 
 --- Procedure E
@@ -290,3 +291,4 @@ BEGIN
             COALESCE(@porcentaje, 0) AS "Porcentaje de incremento";
     END
 END;
+GO
