@@ -7,19 +7,50 @@ ON ProveedorProducto
 AFTER INSERT 
 AS
 BEGIN
-    -- Calcula el posible nuevo id para el inventario
-	DECLARE @nuevoId INT;
-	SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM Inventario;
+    -- Declarar una tabla temporal para almacenar los registros de inserted
+    DECLARE @TempInserted TABLE (
+        productoId INT,
+        totalCantidad INT
+    );
 
-    -- Actualizar o insertar en la tabla Inventario
-    MERGE INTO Inventario AS target
-    USING (SELECT productoId, SUM(cantidad) AS totalCantidad FROM inserted GROUP BY productoId) AS source
-    ON target.productoId = source.productoId
-    WHEN MATCHED THEN
-        UPDATE SET cantidad = target.cantidad + source.totalCantidad
-    WHEN NOT MATCHED THEN
-        INSERT (id, productoId, cantidad)
-        VALUES (@nuevoId,source.productoId, source.totalCantidad);
+    -- Insertar los registros de inserted en la tabla temporal
+    INSERT INTO @TempInserted (productoId, totalCantidad)
+    SELECT productoId, SUM(cantidad) AS totalCantidad
+    FROM inserted
+    GROUP BY productoId;
+
+    -- Procesar cada registro individualmente
+    DECLARE @productoId INT;
+    DECLARE @totalCantidad INT;
+
+    DECLARE cur CURSOR FOR
+    SELECT productoId, totalCantidad
+    FROM @TempInserted;
+
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @productoId, @totalCantidad;
+
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        -- Calcula el posible nuevo id para el inventario
+        DECLARE @nuevoId INT;
+        SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM Inventario;
+
+        -- Actualizar o insertar en la tabla Inventario
+        MERGE INTO Inventario AS target
+        USING (SELECT @productoId AS productoId, @totalCantidad AS totalCantidad) AS source
+        ON target.productoId = source.productoId
+        WHEN MATCHED THEN
+            UPDATE SET cantidad = target.cantidad + source.totalCantidad
+        WHEN NOT MATCHED THEN
+            INSERT (id, productoId, cantidad)
+            VALUES (@nuevoId, source.productoId, source.totalCantidad);
+
+        FETCH NEXT FROM cur INTO @productoId, @totalCantidad;
+    END
+
+    CLOSE cur;
+    DEALLOCATE cur;
 END;
 GO
 -- A.2
