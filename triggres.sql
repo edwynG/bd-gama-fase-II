@@ -295,129 +295,101 @@ GO
 -- Parte II
 --- Trigger C
 -- Al insertar datos en FacturaPromo: llama al verificador de promo válida y acepta el registro o no.
+-- Trigger para verificar la promoción al insertar en FacturaPromo
 CREATE TRIGGER TR_FacturaPromo_VerificarPromocion
 ON FacturaPromo
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Declarar variables para almacenar los valores de la fila
-    DECLARE @facturaId INT, @promoId INT, @tipoPromocion VARCHAR(50), @tipoCompra VARCHAR(50), @fechaActual DATE;
-
-    -- Obtener los valores de la fila insertada
-    SELECT @facturaId = facturaId, @promoId = promoId FROM inserted;
-
     -- Inicializar la fecha actual
+    DECLARE @fechaActual DATE;
     SET @fechaActual = GETDATE();
 
-    -- Determinar el tipo de compra
-    SELECT @tipoCompra =
-        CASE
-            WHEN EXISTS (SELECT 1 FROM OrdenOnline WHERE facturaId = @facturaId) THEN 'Online'
-            WHEN EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId) THEN 'Física'
-            ELSE NULL  -- Manejar el caso en que no se encuentra en ninguna tabla
-        END;
-
-    -- Verificar si la promoción es válida y obtener el tipo de promoción en una sola consulta
-    SELECT @tipoPromocion = tipoPromocion
-    FROM Promo
-    WHERE id = @promoId
-      AND @fechaActual BETWEEN fechaInicio AND fechaFin
-      AND (
-          (@tipoCompra = 'Online' AND (tipoPromocion = 'Online' OR tipoPromocion = 'Ambos')) OR
-          (@tipoCompra = 'Física' AND (tipoPromocion = 'Física' OR tipoPromocion = 'Ambos'))
-      );
-
-    -- Si la promoción no es válida, lanzar un error y cancelar la inserción
-    IF @tipoPromocion IS NULL
+    -- Validar promociones no válidas para las filas en bloque
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN Promo p ON i.promoId = p.id
+        LEFT JOIN OrdenOnline o ON i.facturaId = o.facturaId
+        LEFT JOIN VentaFisica v ON i.facturaId = v.facturaId
+        WHERE p.id IS NULL -- Promo no existe
+          OR @fechaActual NOT BETWEEN p.fechaInicio AND p.fechaFin -- Promo fuera de vigencia
+          OR (
+              -- Validar tipo de promoción para el tipo de compra
+              (o.facturaId IS NOT NULL AND p.tipoPromocion NOT IN ('Online', 'Ambos')) OR
+              (v.facturaId IS NOT NULL AND p.tipoPromocion NOT IN ('Física', 'Ambos'))
+          )
+    )
     BEGIN
         RAISERROR('La promoción no es válida para el tipo de compra.', 16, 1);
         ROLLBACK TRANSACTION;
         RETURN;
     END
-    ELSE
-    BEGIN
-        -- Si la promoción es válida, insertar el registro
-        INSERT INTO FacturaPromo (facturaId, promoId)
-        VALUES (@facturaId, @promoId);
-    END
+
+    -- Insertar todas las filas válidas desde inserted
+    INSERT INTO FacturaPromo (facturaId, promoId)
+    SELECT facturaId, promoId
+    FROM inserted;
 END;
+
 GO
 
 -- TRIGGER D
 -- Verificar cantidad de Stock para OrdenOnline y para VentaFisica
 
 -- Trigger encargado de verificar Stock para OrdenDetalle(OrdenOnline).
+-- Trigger para validar el stock al insertar en OrdenDetalle
 CREATE TRIGGER TR_OrdenDetalle_ValidarStock
 ON OrdenDetalle
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @ordenId INT, @precioPor DECIMAL (10,2);
-
-    -- Obtener los valores de la fila insertada
-    SELECT @ordenId = ordenId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
-
-    -- Verificar el inventario general para OrdenOnline
-    SELECT @stockDisponible = cantidad
-    FROM Inventario
-    WHERE productoId = @productoId;
-
-    -- Validar stock
-    IF @stockDisponible IS NULL OR @stockDisponible = 0
+    -- Validar si existe stock suficiente para los productos insertados
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+        WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad
+    )
     BEGIN
-        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-    ELSE IF @stockDisponible < @cantidad
-    BEGIN
-        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        RAISERROR('No hay unidades suficientes del producto o el producto no está disponible.', 16, 1);
         ROLLBACK TRANSACTION;
         RETURN;
     END
 
-    -- Si hay stock suficiente, insertar el registro
+    -- Insertar las filas que pasen la validación de stock
     INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
-    VALUES (@ordenId, @productoId, @cantidad, @precioPor);
+    SELECT ordenId, productoId, cantidad, precioPor
+    FROM inserted;
 END;
+
 GO
 
---Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica).
+-- Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica)
 CREATE TRIGGER TR_FacturaDetalle_ValidarStock
 ON FacturaDetalle
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Declarar variables para almacenar los valores de la fila
-    DECLARE @productoId INT, @cantidad INT, @stockDisponible INT, @facturaId INT, @precioPor DECIMAL (10,2);
-
-    -- Obtener los valores de la fila insertada
-    SELECT @facturaId = facturaId, @productoId = productoId, @cantidad = cantidad, @precioPor = precioPor FROM inserted;
-
-    -- Verificar el inventario del producto que se quiere insertar a la factura
-    SELECT @stockDisponible = cantidad
-    FROM Inventario
-    WHERE productoId = @productoId;
-
-    -- Validar stock
-    IF @stockDisponible IS NULL OR @stockDisponible = 0
+    -- Verificar inventario para los productos insertados
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+        WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad
+    )
     BEGIN
-        RAISERROR('El producto no está disponible por los momentos.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
-    ELSE IF @stockDisponible < @cantidad
-    BEGIN
-        RAISERROR('No hay unidades suficientes del producto para esta compra.', 16, 1);
+        RAISERROR('No hay unidades suficientes del producto o el producto no está disponible.', 16, 1);
         ROLLBACK TRANSACTION;
         RETURN;
     END
 
-    -- Si hay stock suficiente, insertar el registro
+    -- Si pasa la validación, insertar todas las filas
     INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
-    VALUES (@facturaId, @productoId, @cantidad, @precioPor);
+    SELECT facturaId, productoId, cantidad, precioPor
+    FROM inserted;
 END;
+
 GO
 
 -- Parte III 
