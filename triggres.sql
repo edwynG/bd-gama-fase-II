@@ -344,26 +344,42 @@ ON OrdenDetalle
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Validar si existe stock suficiente para los productos insertados
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        LEFT JOIN Inventario inv ON i.productoId = inv.productoId
-        WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad
-    )
-    BEGIN
-        RAISERROR('No hay unidades suficientes del producto o el producto no está disponible.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
+    -- Tabla de errores de stock
+    CREATE TABLE #ErroresStock (
+        ordenId INT,
+        productoId INT,
+        cantidad INT,
+        mensaje VARCHAR(255)
+    );
 
-    -- Insertar las filas que pasen la validación de stock
+    -- Validar stock e insertar filas válidas
     INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
-    SELECT ordenId, productoId, cantidad, precioPor
-    FROM inserted;
-END;
+    SELECT i.ordenId, i.productoId, i.cantidad, i.precioPor
+    FROM inserted i
+    LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+    WHERE inv.cantidad IS NOT NULL AND inv.cantidad >= i.cantidad;
 
+    -- Registrar errores en la tabla temporal
+    INSERT INTO #ErroresStock (ordenId, productoId, cantidad, mensaje)
+    SELECT i.ordenId, i.productoId, i.cantidad, 
+           CASE 
+               WHEN inv.cantidad IS NULL THEN 'Producto no disponible en inventario'
+               WHEN inv.cantidad < i.cantidad THEN 'Stock insuficiente'
+           END AS mensaje
+    FROM inserted i
+    LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+    WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad;
+
+    -- Mostrar mensajes de error si los hay
+    IF EXISTS (SELECT 1 FROM #ErroresStock)
+    BEGIN
+        SELECT * FROM #ErroresStock;
+        RAISERROR('Existen problemas de stock en algunos productos. Verifique los registros.', 10, 1);
+    END
+END;
 GO
+
+
 
 -- Trigger encargado de verificar Stock para FacturaDetalle(VentaFisica)
 CREATE TRIGGER TR_FacturaDetalle_ValidarStock
@@ -371,26 +387,41 @@ ON FacturaDetalle
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Verificar inventario para los productos insertados
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        LEFT JOIN Inventario inv ON i.productoId = inv.productoId
-        WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad
-    )
-    BEGIN
-        RAISERROR('No hay unidades suficientes del producto o el producto no está disponible.', 16, 1);
-        ROLLBACK TRANSACTION;
-        RETURN;
-    END
+    CREATE TABLE #ErroresStock (
+        facturaId INT,
+        productoId INT,
+        cantidad INT,
+        mensaje VARCHAR(255)
+    );
 
-    -- Si pasa la validación, insertar todas las filas
+    -- Validar stock e insertar filas válidas
     INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
-    SELECT facturaId, productoId, cantidad, precioPor
-    FROM inserted;
-END;
+    SELECT i.facturaId, i.productoId, i.cantidad, i.precioPor
+    FROM inserted i
+    LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+    WHERE inv.cantidad IS NOT NULL AND inv.cantidad >= i.cantidad;
 
+    -- Registrar errores en la tabla temporal
+    INSERT INTO #ErroresStock (facturaId, productoId, cantidad, mensaje)
+    SELECT i.facturaId, i.productoId, i.cantidad, 
+           CASE 
+               WHEN inv.cantidad IS NULL THEN 'Producto no disponible en inventario'
+               WHEN inv.cantidad < i.cantidad THEN 'Stock insuficiente'
+           END AS mensaje
+    FROM inserted i
+    LEFT JOIN Inventario inv ON i.productoId = inv.productoId
+    WHERE inv.cantidad IS NULL OR inv.cantidad < i.cantidad;
+
+    -- Mostrar mensajes de error si los hay
+    IF EXISTS (SELECT 1 FROM #ErroresStock)
+    BEGIN
+        SELECT * FROM #ErroresStock;
+        RAISERROR('Existen problemas de stock en algunos productos. Verifique los registros.', 10, 1);
+    END
+END;
 GO
+
+
 
 -- Parte III 
 -- Trigger E
