@@ -146,22 +146,16 @@ END
 
 -- subTotal
 
-CREATE FUNCTION subTotal (@facturaId INT)
-RETURNS DECIMAL(10,2)
+CREATE FUNCTION subTotal(@facturaId INT)
+RETURNS DECIMAL(10, 2)
 AS
 BEGIN
-    DECLARE @subtotal DECIMAL(10,2)
+    DECLARE @subtotal DECIMAL(10, 2);
 
-    -- Obtener el subtotal directamente de la tabla Factura
-    SELECT @subtotal = subTotal
-    FROM Factura
-    WHERE id = @facturaId
+    SELECT @subtotal = SUM(fd.cantidad * fd.precioPor)
+    FROM FacturaDetalle fd
+    WHERE fd.facturaId = @facturaId;
 
-    -- Si no se encuentra la factura, el subtotal es 0
-    IF @subtotal IS NULL
-    BEGIN
-        SET @subtotal = 0.00
-    END
-
-    RETURN @subtotal
-END
+    -- Si no hay detalles, el subtotal será 0
+    RETURN COALESCE(@subtotal, 0);
+END;
