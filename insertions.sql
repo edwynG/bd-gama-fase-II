@@ -1198,7 +1198,8 @@ INSERT INTO ProveedorProducto (id, proveedorId, productoId, fechaCompra, precioP
 (206, 6, 206, '2025-03-14', 2.10, 10000),
 (207, 7, 207, '2025-03-14', 1.90, 10000),
 (208, 8, 208, '2025-03-14', 1.50, 10000),
-(209, 9, 209, '2025-03-14', 3.00, 10000);
+(209, 9, 209, '2025-03-14', 3.00, 10000),
+(210, 10, 91, '2025-03-14', 1.60, 10000);
 
 -- Inserts para la tabla ProductoRecomendadoParaCliente
 
