@@ -1,32 +1,32 @@
 -- Parte I
 --Consulta A
 SELECT 
-	te.*, 
-	Temp.CantidadUsos,
-	Temp.IngresosPorTipoEnvio,
-	Temp.ProporcionCantidadEnvios,
-	Temp.ProporcionIngresosTotal
-FROM TipoEnvio te JOIN
-
-	(	SELECT 
-		te.id, 
-		COUNT(oo.tipoEnvioId) AS CantidadUsos, 
-		SUM(f.montoTotal) AS IngresosPorTipoEnvio,
-		(COUNT(oo.tipoEnvioId) / (SELECT COUNT(oo.id)
-									FROM OrdenOnline oo
-								)) * 100 AS ProporcionCantidadEnvios,
-		(SUM(f.montoTotal) / (SELECT SUM(f.montoTotal)
-								FROM OrdenOnline oo 
-								JOIN Factura AS f ON oo.facturaId = f.id
-								GROUP BY f.id
-							)) * 100 AS ProporcionIngresosTotal
-
-		FROM TipoEnvio te 
-		JOIN OrdenOnline AS oo ON te.id = oo.tipoEnvioId
-		JOIN Factura AS f ON oo.facturaId = f.id
-		
-		GROUP BY te.id 
-	) AS Temp ON te.id = Temp.id
+    te.*, 
+    Temp.CantidadUsos,
+    Temp.IngresosPorTipoEnvio,
+    Temp.ProporcionCantidadEnvios,
+    Temp.ProporcionIngresosTotal
+FROM TipoEnvio te 
+JOIN
+    (
+        SELECT 
+            te.id, 
+            COUNT(oo.tipoEnvioId) AS CantidadUsos, 
+            SUM(f.montoTotal) AS IngresosPorTipoEnvio,
+            (COUNT(oo.tipoEnvioId) * 1.0 / 
+                (SELECT COUNT(oo.id) FROM OrdenOnline oo)
+            ) * 100 AS ProporcionCantidadEnvios,
+            (SUM(f.montoTotal) * 1.0 / 
+                (SELECT SUM(f.montoTotal) 
+                 FROM OrdenOnline oo 
+                 JOIN Factura AS f ON oo.facturaId = f.id
+                )
+            ) * 100 AS ProporcionIngresosTotal
+        FROM TipoEnvio te 
+        JOIN OrdenOnline AS oo ON te.id = oo.tipoEnvioId
+        JOIN Factura AS f ON oo.facturaId = f.id
+        GROUP BY te.id
+    ) AS Temp ON te.id = Temp.id;
 
 	
 -- 	Consulta B
