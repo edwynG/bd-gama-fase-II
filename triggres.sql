@@ -112,7 +112,7 @@ BEGIN
                     @id,
                     id,
                     CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
-                    precioPor
+                    ISNULL(precioPor, 0)
                 FROM Producto
                 ORDER BY NEWID();
             END
@@ -197,7 +197,7 @@ BEGIN
                 @facturaId,
                 id,
                 CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT), -- Genera una cantidad aleatoria entre 1 y 10
-                precioPor
+                ISNULL(precioPor, 0)
             FROM Producto
             ORDER BY NEWID();
 
@@ -301,26 +301,12 @@ ON FacturaPromo
 INSTEAD OF INSERT
 AS
 BEGIN
-    -- Inicializar la fecha actual
-    DECLARE @fechaActual DATE;
-    SET @fechaActual = GETDATE();
-
+	
     -- Validar promociones no válidas para las filas en bloque
-    IF EXISTS (
-        SELECT 1
-        FROM inserted i
-        LEFT JOIN Promo p ON i.promoId = p.id
-        LEFT JOIN OrdenOnline o ON i.facturaId = o.facturaId
-        LEFT JOIN VentaFisica v ON i.facturaId = v.facturaId
-        WHERE p.id IS NULL -- Promo no existe
-          OR @fechaActual NOT BETWEEN p.fechaInicio AND p.fechaFin -- Promo fuera de vigencia
-          OR (
-              -- Validar tipo de promoción para el tipo de compra
-              (o.facturaId IS NOT NULL AND p.tipoPromocion NOT IN ('Online', 'Ambos')) OR
-              (v.facturaId IS NOT NULL AND p.tipoPromocion NOT IN ('Física', 'Ambos'))
-          )
-    )
-    BEGIN
+    IF EXISTS(SELECT 1
+		FROM Inserted i 
+		WHERE NOT dbo.isValidPromo(i.facturaId,i.promoId)=1)
+	BEGIN
         RAISERROR('La promoción no es válida para el tipo de compra.', 16, 1);
         ROLLBACK TRANSACTION;
         RETURN;
@@ -333,6 +319,7 @@ BEGIN
 END;
 
 GO
+
 
 -- TRIGGER D
 -- Verificar cantidad de Stock para OrdenOnline y para VentaFisica
