@@ -465,11 +465,12 @@ FROM
     Producto p
     -- El productoId en Inventario es una FK, pero no se repetira porque la relación se maneja de forma global para saber el stock de cada producto
     JOIN Inventario i ON i.productoId = p.id
-    JOIN Categoria c ON c.id = i.productoId
+    JOIN Categoria c ON c.id = p.categoriaId
 WHERE
     LOWER(c.nombre) = LOWER('Chucherias');
 
--- CONSULTA E LISTA DE PRODUCTOS RECOMENDADOS Y NO RECOMENDADOS ANTES Y DESPUES DE SU COMPRA
+-- Consulta E 
+-- LISTA DE PRODUCTOS RECOMENDADOS Y NO RECOMENDADOS ANTES Y DESPUES DE SU COMPRA
 SELECT
     c.CI,
     c.nombre,
