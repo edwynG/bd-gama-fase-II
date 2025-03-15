@@ -133,6 +133,20 @@ BEGIN
 				montoIVA = dbo.montoIVA(@facturaId),
 				montoTotal = dbo.montoTotal(@facturaId)
 			WHERE id = @facturaId;
+             -- Validar y agregar forma de pago si no existe
+            IF NOT EXISTS (SELECT 1 FROM Pago WHERE facturaId = @facturaId)
+            BEGIN
+                DECLARE @nroTransaccion INT;
+
+                -- Calcular el siguiente número de transacción
+                SELECT @nroTransaccion = ISNULL(MAX(nroTransaccion), 0) + 1 FROM Pago;
+
+                DECLARE @metodoPagoId INT;
+                SET @metodoPagoId = CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT); -- Genera un ID de método de pago aleatorio entre 1 y 10
+
+                INSERT INTO Pago (facturaId, nroTransaccion, metodoPagoId)
+                VALUES (@facturaId, @nroTransaccion, @metodoPagoId);
+            END
         END
         ELSE
         BEGIN
@@ -207,6 +221,20 @@ BEGIN
 				montoIVA = dbo.montoIVA(@facturaId),
 				montoTotal = dbo.montoTotal(@facturaId)
 			WHERE id = @facturaId;
+             -- Validar y agregar forma de pago si no existe
+            IF NOT EXISTS (SELECT 1 FROM Pago WHERE facturaId = @facturaId)
+            BEGIN
+                DECLARE @nroTransaccion INT;
+
+                -- Calcular el siguiente número de transacción
+                SELECT @nroTransaccion = ISNULL(MAX(nroTransaccion), 0) + 1 FROM Pago;
+
+                DECLARE @metodoPagoId INT;
+                SET @metodoPagoId = CAST((RAND(CHECKSUM(NEWID())) * 10 + 1) AS INT); -- Genera un ID de método de pago aleatorio entre 1 y 10
+
+                INSERT INTO Pago (facturaId, nroTransaccion, metodoPagoId)
+                VALUES (@facturaId, @nroTransaccion, @metodoPagoId);
+            END
         END
 
         -- Insertar la venta física
