@@ -2,7 +2,7 @@
 -- Parte I
 -- Procedimiento A
 	/* Es necesario que se indique que tipo de envio se usara, asi como el metodo de pago */
-CREATE PROCEDURE SimularCompraOnline (@ClienteId INT, @MetodoPagoId INT, @TipoEnvioId INT, @Carrito INT)
+CREATE PROCEDURE SimularCompraOnline (@ClienteId INT, @MetodoPagoId INT, @TipoEnvioId INT)
 AS
 BEGIN
 	DECLARE @OrdenOnlineId INT;
@@ -81,27 +81,6 @@ BEGIN
 	
 INSERT INTO ProveedorProducto (id, proveedorId, productoId, fechaCompra, precioPor, cantidad)
 VALUES (@IdProveedorProducto, @ProveedorId, @ProductoId, GETDATE(), @PrecioProducto, @Cantidad)
-
--- Validar que el producto este en inventario
-	
-	SELECT @ComprobarCantidad = COALESCE(cantidad, 0)
-	FROM Inventario
-	WHERE productoId = @ProductoId
-	
-IF @ComprobarCantidad > 0
-BEGIN
-	UPDATE Inventario
-	SET cantidad = cantidad + @Cantidad
-	WHERE productoId = @ProductoId
-END
-	ELSE
-	BEGIN
-		SELECT @IdInventario = COALESCE(MAX(id), 0) + 1
-		FROM Inventario
-		
-		INSERT INTO Inventario (id, productoId, cantidad)
-		VALUES (@IdInventario, @ProductoId, @Cantidad)
-	END
 	
 END
 GO
@@ -178,12 +157,9 @@ BEGIN
     -- Verificar si la factura pertenece a una venta física
     IF EXISTS (SELECT 1 FROM VentaFisica WHERE facturaId = @facturaId)
     BEGIN
-        -- Obtener el siguiente ID para la tabla FacturaDetalle
-        SELECT @nuevoId = ISNULL(MAX(id), 0) + 1 FROM FacturaDetalle;
-
         -- Insertar el producto en FacturaDetalle
-        INSERT INTO FacturaDetalle (id, facturaId, productoId, cantidad, precioPor)
-        VALUES (@nuevoId, @facturaId, @productoId, @cantidad, @precioPor);
+        INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
+        VALUES (@facturaId, @productoId, @cantidad, @precioPor);
 
         PRINT 'Producto agregado correctamente a la factura fisica.';
     END
