@@ -103,7 +103,7 @@ INSERT INTO Categoria (id, nombre, descripcion) VALUES
 (18, 'Cafe e Infusiones', 'Cafe, te y bebidas calientes'),
 (19, 'Aceites y Vinagres', 'Aceites, vinagres y aderezos'),
 (20, 'Especias y Condimentos', 'Especias, sal y condimentos'),
-(21, 'Dulces y Chocolates', 'Chocolates, caramelos y dulces'),
+(21, 'Chucherias', 'Chocolates, caramelos y dulces'),
 (22, 'Conservas', 'Conservas de pescado, carne y vegetales'),
 (23, 'Pastas Frescas', 'Pastas frescas y listas para cocinar'),
 (24, 'Salsas y Aderezos', 'Salsas, mayonesas y ketchup'),
