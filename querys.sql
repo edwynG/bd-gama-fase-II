@@ -1,150 +1,148 @@
 -- Parte I
 --Consulta A
-SELECT 
-    te.*, 
+SELECT
+    te.*,
     Temp.CantidadUsos,
     Temp.IngresosPorTipoEnvio,
     Temp.ProporcionCantidadEnvios,
     Temp.ProporcionIngresosTotal
-FROM TipoEnvio te 
-JOIN
-    (
-        SELECT 
-            te.id, 
-            COUNT(oo.tipoEnvioId) AS CantidadUsos, 
+FROM
+    TipoEnvio te
+    JOIN (
+        SELECT
+            te.id,
+            COUNT(oo.tipoEnvioId) AS CantidadUsos,
             SUM(f.montoTotal) AS IngresosPorTipoEnvio,
-            (COUNT(oo.tipoEnvioId) * 1.0 / 
-                (SELECT COUNT(oo.id) FROM OrdenOnline oo)
+            (
+                COUNT(oo.tipoEnvioId) * 1.0 / (
+                    SELECT
+                        COUNT(oo.id)
+                    FROM
+                        OrdenOnline oo
+                )
             ) * 100 AS ProporcionCantidadEnvios,
-            (SUM(f.montoTotal) * 1.0 / 
-                (SELECT SUM(f.montoTotal) 
-                 FROM OrdenOnline oo 
-                 JOIN Factura AS f ON oo.facturaId = f.id
+            (
+                SUM(f.montoTotal) * 1.0 / (
+                    SELECT
+                        SUM(f.montoTotal)
+                    FROM
+                        OrdenOnline oo
+                        JOIN Factura AS f ON oo.facturaId = f.id
                 )
             ) * 100 AS ProporcionIngresosTotal
-        FROM TipoEnvio te 
-        JOIN OrdenOnline AS oo ON te.id = oo.tipoEnvioId
-        JOIN Factura AS f ON oo.facturaId = f.id
-        GROUP BY te.id
+        FROM
+            TipoEnvio te
+            JOIN OrdenOnline AS oo ON te.id = oo.tipoEnvioId
+            JOIN Factura AS f ON oo.facturaId = f.id
+        GROUP BY
+            te.id
     ) AS Temp ON te.id = Temp.id;
 
-	
 -- 	Consulta B
-SELECT 
-	c.nombre AS NombreCliente, 
-	ClienteTotalFisico.MontoTotalFisico AS TotalGastadoComprasFisicas, 
-	ClienteTotalOnline.MontoTotalOnline AS TotalGastadoComprasOnline, 
-	MetodoPagoPredilecto.nombre AS MetodoPagoPredilecto
-
-FROM 
-	Cliente c 
-	JOIN (
+SELECT
+    c.nombre AS NombreCliente,
+    ClienteTotalFisico.MontoTotalFisico AS TotalGastadoComprasFisicas,
+    ClienteTotalOnline.MontoTotalOnline AS TotalGastadoComprasOnline,
+    MetodoPagoPredilecto.nombre AS MetodoPagoPredilecto
+FROM
+    Cliente c
+    JOIN (
         -- Obtengo el monto gastado en compras fisicas del cliente en la fecha actual
-		SELECT 
-			c1.id, 
-			SUM(f.montoTotal) AS MontoTotalFisico
-		
-		FROM VentaFisica vf 
-		JOIN Factura AS f ON vf.facturaId = f.id
-		JOIN Cliente AS c1 ON f.clienteId = c1.id
-		JOIN Pago AS p ON f.id = p.facturaId
-		
-		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
-		
-		GROUP BY c1.id
-	
-	) AS ClienteTotalFisico ON c.id = ClienteTotalFisico.id
-
-	JOIN 
-		(
-             -- Obtengo el monto gastado en compras online del cliente en la fecha actual
-		SELECT 
-			c1.id, 
-			SUM(f.montoTotal) AS MontoTotalOnline
-		
-		FROM OrdenOnline oo 
-		JOIN Factura AS f ON oo.facturaId = f.id
-		JOIN Cliente AS c1 ON f.clienteId = c1.id
-		JOIN Pago AS p ON f.id = p.facturaId
-		
-		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
-		
-		GROUP BY c1.id
-	
-	) AS ClienteTotalOnline ON c.id = ClienteTotalOnline.id
-	
-	JOIN(
-		SELECT 
-			fp.nombre, 
-			NombreFP.id
-		
-		FROM FormaPago AS fp
-
-        -- Join para obtener el nombre del metodo de pago
-		JOIN(
-	
-			SELECT 
-                -- Id del cliente, Id del metodo de pago mas usado
-				CantUsosMetodoPago.id, 
-				CantUsosMetodoPago.metodoPagoId AS IdMetodoMasUsado, 
-				MAX(CantUsosMetodoPago.UsosMetodoPago) AS maximo
-			
-			FROM (
-					SELECT 
-                     -- Id del cliente, junto a cuantas veces ha usado sus metodos de pago
-						c1.id, 
-						p.metodoPagoId, 
-						COUNT(p.metodoPagoId) AS UsosMetodoPago
-					
-					FROM Cliente c1
-					JOIN Factura AS f ON c1.id = f.clienteId
-					JOIN Pago AS p ON f.id = p.facturaId
-					JOIN FormaPago AS fp ON p.metodoPagoId = fp.id 
-		
-					GROUP BY c1.id, p.metodoPagoId
-					) AS CantUsosMetodoPago
-		
-			GROUP BY CantUsosMetodoPago.id, CantUsosMetodoPago.metodoPagoId
-			
-		) AS NombreFP ON fp.id = NombreFP.IdMetodoMasUsado
-		
-		
-	) AS MetodoPagoPredilecto ON c.id = MetodoPagoPredilecto.id
-
-
--- Consulta C
-	
-	SELECT 
-		p.nombre AS NombreProducto,
-		c2.nombre AS Categoria,
-		m.nombre AS Marca
-	FROM Producto p 
-	JOIN ProductoRecomendadoParaCliente AS prpc ON p.id = prpc.productoRecomendadoId 
-	JOIN Cliente AS c ON prpc.clienteId = c.id
-	JOIN Categoria AS c2 ON p.categoriaId = c2.id 
-	JOIN Marca AS m ON p.marcaId = m.id
-	
-	WHERE c.id IN (SELECT 
-                    --Clientes que han comprado los productos en la fecha solicitada
-                    c.id
-					
-					FROM Cliente AS c
-					JOIN Factura AS f ON c.id = f.clienteId
-					WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) AND
-						  MONTH(f.fechaEmision) = MONTH(GETDATE()) 
-					) AND
-					
-	    p.id IN ( SELECT 
-                    -- Se verifica que el producto este en el carrito de algun cliente
-                    p.id
-
-				    FROM Producto AS p
-				    JOIN Carrito AS c ON p.id = c.productoId
-	)				
-	
-
--- Parte II
---- Consulta D
+        SELECT
+            c1.id,
+            SUM(f.montoTotal) AS MontoTotalFisico
+        FROM
+            VentaFisica vf
+            JOIN Factura AS f ON vf.facturaId = f.id
+            JOIN Cliente AS c1 ON f.clienteId = c1.id
+            JOIN Pago AS p ON f.id = p.facturaId
+        WHERE
+            YEAR (f.fechaEmision) = YEAR (GETDATE ())
+        GROUP BY
+            c1.id
+    ) AS ClienteTotalFisico ON c.id = ClienteTotalFisico.id
+    JOIN (
+        -- Obtengo el monto gastado en compras online del cliente en la fecha actual
+        SELECT
+            c1.id,
+            SUM(f.montoTotal) AS MontoTotalOnline
+        FROM
+            OrdenOnline oo
+            JOIN Factura AS f ON oo.facturaId = f.id
+            JOIN Cliente AS c1 ON f.clienteId = c1.id
+            JOIN Pago AS p ON f.id = p.facturaId
+        WHERE
+            YEAR (f.fechaEmision) = YEAR (GETDATE ())
+        GROUP BY
+            c1.id
+    ) AS ClienteTotalOnline ON c.id = ClienteTotalOnline.id
+    JOIN (
+        SELECT
+            fp.nombre,
+            NombreFP.id
+        FROM
+            FormaPago AS fp
+            -- Join para obtener el nombre del metodo de pago
+            JOIN (
+                SELECT
+                    -- Id del cliente, Id del metodo de pago mas usado
+                    CantUsosMetodoPago.id,
+                    CantUsosMetodoPago.metodoPagoId AS IdMetodoMasUsado,
+                    MAX(CantUsosMetodoPago.UsosMetodoPago) AS maximo
+                FROM
+                    (
+                        SELECT
+                            -- Id del cliente, junto a cuantas veces ha usado sus metodos de pago
+                            c1.id,
+                            p.metodoPagoId,
+                            COUNT(p.metodoPagoId) AS UsosMetodoPago
+                        FROM
+                            Cliente c1
+                            JOIN Factura AS f ON c1.id = f.clienteId
+                            JOIN Pago AS p ON f.id = p.facturaId
+                            JOIN FormaPago AS fp ON p.metodoPagoId = fp.id
+                        GROUP BY
+                            c1.id,
+                            p.metodoPagoId
+                    ) AS CantUsosMetodoPago
+                GROUP BY
+                    CantUsosMetodoPago.id,
+                    CantUsosMetodoPago.metodoPagoId
+            ) AS NombreFP ON fp.id = NombreFP.IdMetodoMasUsado
+    ) AS MetodoPagoPredilecto ON c.id = MetodoPagoPredilecto.id
+    -- Consulta C
+SELECT
+    p.nombre AS NombreProducto,
+    c2.nombre AS Categoria,
+    m.nombre AS Marca
+FROM
+    Producto p
+    JOIN ProductoRecomendadoParaCliente AS prpc ON p.id = prpc.productoRecomendadoId
+    JOIN Cliente AS c ON prpc.clienteId = c.id
+    JOIN Categoria AS c2 ON p.categoriaId = c2.id
+    JOIN Marca AS m ON p.marcaId = m.id
+WHERE
+    c.id IN (
+        SELECT
+            --Clientes que han comprado los productos en la fecha solicitada
+            c.id
+        FROM
+            Cliente AS c
+            JOIN Factura AS f ON c.id = f.clienteId
+        WHERE
+            YEAR (f.fechaEmision) = YEAR (GETDATE ())
+            AND MONTH (f.fechaEmision) = MONTH (GETDATE ())
+    )
+    AND p.id IN (
+        SELECT
+            -- Se verifica que el producto este en el carrito de algun cliente
+            p.id
+        FROM
+            Producto AS p
+            JOIN Carrito AS c ON p.id = c.productoId
+    )
+    -- Parte II
+    --- Consulta D
 SELECT DISTINCT
     e.CI,
     e.nombre + ' ' + e.apellido AS nombreCompleto,
@@ -258,9 +256,8 @@ FROM
     -- Consideramos que no tiene sentido que hayan varias PromoEspecializada con la misma tupla (PromoId, ProductoId). Ya que esto indica que la promo se aplica aun producto en especifico, si se repite consideramos que habria un problema de redundancia
     LEFT JOIN PromoEspecializada pe2 ON pe2.promoId = Temp.promoId
     AND pe2.productoId = Temp.productoId
-
--- Parte III
---- Consulta G
+    -- Parte III
+    --- Consulta G
 SELECT
     c.*,
     Temp.totalOrdenes,
@@ -351,36 +348,45 @@ FROM
 SELECT
     (
         -- Cantidad de clientes que han realizado una segunda comprar detro de los 30 dias posteriores a la 1er compra
-        COUNT(f2.clienteId) / (
-            --- Cantidad de clientes que han realizado compras
+        COUNT(clientesCondition.clienteId) / (
             SELECT
-                COUNT(c2.id)
+                COUNT(*)
             FROM
-                Cliente c2
-                JOIN Factura f3 ON f3.clienteId = c2.id
-            GROUP BY
-                c2.id
+                ( --- Cantidad de clientes que han realizado compras
+                    SELECT
+                        c2.id
+                    FROM
+                        Cliente c2
+                        JOIN Factura f3 ON f3.clienteId = c2.id
+                    GROUP BY
+                        c2.id
+                ) as temp
         )
     ) as porcentajeClientes
 FROM
     (
-        -- Tabla temporal donde esta la fecha de la 1er compra de cada cliente
         SELECT
-            f.clienteId as clienteId,
-            MIN(f.fechaEmision) as fecha
+            f2.clienteId
         FROM
-            Factura f
-            JOIN Cliente c ON c.id = f.clienteId
+            (
+                -- Tabla temporal donde esta la fecha de la 1er compra de cada cliente
+                SELECT
+                    f.clienteId as clienteId,
+                    MIN(f.fechaEmision) as fecha
+                FROM
+                    Factura f
+                    JOIN Cliente c ON c.id = f.clienteId
+                GROUP BY
+                    f.clienteId
+            ) as PrimeraCompara
+            JOIN Factura f2 ON f2.clienteId = PrimeraCompara.clienteId
+            -- Filtra los registros donde la fecha de la 2da compra esta entre 1 y 30 dias despues de la 1er compra
+        WHERE
+            f2.fechaEmision > PrimeraCompara.fecha
+            AND f2.fechaEmision <= DATEADD (DAY, 30, PrimeraCompara.fecha)
         GROUP BY
-            f.clienteId
-    ) as PrimeraCompara
-    JOIN Factura f2 ON f2.clienteId = PrimeraCompara.clienteId
-    -- Filtra los registros donde la fecha de la 2da compra esta entre 1 y 30 dias despues de la 1er compra
-WHERE
-    f2.fechaEmision > PrimeraCompara.fecha
-    AND f2.fechaEmision <= DATEADD (DAY, 30, PrimeraCompara.fecha)
-GROUP BY
-    f2.clienteId;
+            f2.clienteId
+    ) clientesCondition
 
 --- Consulta I
 SELECT
@@ -438,9 +444,8 @@ FROM
 WHERE
     c.nombre = 'Chucherias';
 
-
 -- CONSULTA E LISTA DE PRODUCTOS RECOMENDADOS Y NO RECOMENDADOS ANTES Y DESPUES DE SU COMPRA
-SELECT 
+SELECT
     c.CI,
     c.nombre,
     c.sexo,
@@ -449,44 +454,43 @@ SELECT
     COALESCE(recomendados.porcentaje_recomendados, 0) AS ComprasDespuesDeRecomendacion,
     COALESCE(no_recomendados.porcentaje_no_recomendados, 0) AS ComprasAntesDeRecomendacion
     -- Se utiliza COALESCE porque puede que no haya referencia en historial cliente o en alguna de las tablas y asi se evitan errores
-FROM 
+FROM
     Cliente c
-
     -- LISTA DE CLIENTES Y TOTAL DE PRODUCTOS QUE COMPRARON LUEGO DE UNA RECOMENDACION
-LEFT JOIN (
-    SELECT 
-        h.clienteId,
-        COUNT(DISTINCT h.productoId) AS productos_recomendados,
-        CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_recomendados
-        /* NULLIF es una función que devuelve NULL si el primer argumento es igual al segundo. En este caso, si el conteo de productos únicos es 0, NULLIF devolverá NULL.
-           esto es importante para evitar la división por cero. Si no hay productos, en lugar de intentar dividir por 0 (lo que causaría un error), se devolverá NULL.
-           La función CAST convierte el resultado de COUNT(DISTINCT h.productoId) a un tipo de dato FLOAT.
-        */
-    FROM 
-        HistorialClienteProducto h
-    JOIN 
-        ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
-    WHERE 
-        h.fecha > pr.fechaRecomendacion AND h.tipoAccion = 'Compra'
-    GROUP BY 
-        h.clienteId
-) AS recomendados ON c.id = recomendados.clienteId
-
+    LEFT JOIN (
+        SELECT
+            h.clienteId,
+            COUNT(DISTINCT h.productoId) AS productos_recomendados,
+            CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_recomendados
+            /* NULLIF es una función que devuelve NULL si el primer argumento es igual al segundo. En este caso, si el conteo de productos únicos es 0, NULLIF devolverá NULL.
+            esto es importante para evitar la división por cero. Si no hay productos, en lugar de intentar dividir por 0 (lo que causaría un error), se devolverá NULL.
+            La función CAST convierte el resultado de COUNT(DISTINCT h.productoId) a un tipo de dato FLOAT.
+             */
+        FROM
+            HistorialClienteProducto h
+            JOIN ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
+        WHERE
+            h.fecha > pr.fechaRecomendacion
+            AND h.tipoAccion = 'Compra'
+        GROUP BY
+            h.clienteId
+    ) AS recomendados ON c.id = recomendados.clienteId
     -- LISTA DE CLIENTES Y TOTAL DE PRODUCTOS QUE COMPRARON ANTES DE UNA RECOMENDACION
-LEFT JOIN (
-    SELECT 
-        h.clienteId,
-        COUNT(DISTINCT h.productoId) AS productos_no_recomendados,
-        CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_no_recomendados
-        -- SE UTILIZA LA MISMA LOGICA QUE EN EL SELECT DEL LEFT JOIN ANTERIOR PERO ESTA VEZ ES PARA OBTENER LOS QUE FUERON COMPRADOS SIN RECOMENDACION.
-    FROM 
-        HistorialClienteProducto h
-    LEFT JOIN 
-        ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
-    WHERE 
-        h.fecha <= pr.fechaRecomendacion OR pr.fechaRecomendacion IS NULL AND h.tipoAccion = 'Compra'
-    GROUP BY 
-        h.clienteId
-) AS no_recomendados ON c.id = no_recomendados.clienteId
-ORDER BY 
+    LEFT JOIN (
+        SELECT
+            h.clienteId,
+            COUNT(DISTINCT h.productoId) AS productos_no_recomendados,
+            CAST(COUNT(DISTINCT h.productoId) AS FLOAT) / NULLIF(COUNT(DISTINCT h.productoId), 0) * 100 AS porcentaje_no_recomendados
+            -- SE UTILIZA LA MISMA LOGICA QUE EN EL SELECT DEL LEFT JOIN ANTERIOR PERO ESTA VEZ ES PARA OBTENER LOS QUE FUERON COMPRADOS SIN RECOMENDACION.
+        FROM
+            HistorialClienteProducto h
+            LEFT JOIN ProductoRecomendadoParaCliente pr ON h.productoId = pr.productoRecomendadoId
+        WHERE
+            h.fecha <= pr.fechaRecomendacion
+            OR pr.fechaRecomendacion IS NULL
+            AND h.tipoAccion = 'Compra'
+        GROUP BY
+            h.clienteId
+    ) AS no_recomendados ON c.id = no_recomendados.clienteId
+ORDER BY
     c.CI;
