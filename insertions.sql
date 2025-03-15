@@ -697,8 +697,8 @@ INSERT INTO Producto (id, nombre, codigoBarra, descripcion, tipoPrecio, precioPo
 (35, 'Under Armour Cerveza 500ml', '1234567890157', 'Cerveza artesanal', 'PorUnidad', 3.00, 0, 11, 35),
 (36, 'Haagen-Dazs Helado 500ml', '1234567890158', 'Helado de vainilla', 'PorUnidad', 5.00, 0, 17, 36),
 (37, 'Saludela Granola 500g', '1234567890159', 'Granola saludable', 'PorUnidad', 3.50, 0, 25, 37),
-(38, 'Chips Ahoy! Galletas 300g', '1234567890160', 'Galletas de chocolate', 'PorUnidad', 2.00, 0, 26, 38),
-(39, 'Sensodyne Pasta Dental 100ml', '1234567890161', 'Pasta dental', 'PorUnidad', 1.50, 0, 9, 39),
+(38, 'Cloro Gama', '1234567890160', 'Cloro', 'PorUnidad', 2.00, 0, 8, 40),
+(39, 'Jabon Azul Gama', '1234567890161', 'Jabon Azul', 'PorUnidad', 1.50, 0, 8, 40),
 (40, 'Gama Detergente', '1234567890162', 'Detergente en polvo', 'PorPesoKg', 3.00, 0, 8, 40),
 (41, 'Coca-Cola 2L', '1234567890163', 'Refresco de cola', 'PorUnidad', 2.50, 0, 1, 1),
 (42, 'Pepsi 2L', '1234567890164', 'Refresco de cola', 'PorUnidad', 2.50, 0, 1, 2),
@@ -1881,3 +1881,26 @@ INSERT INTO PromoEspecializada (id, promoId, productoId, categoriaId, marcaId) V
 (11, 11, 11, 11, 11),
 (12, 12, 12, 12, 12),
 (13, 13, 13, 13, 13);
+
+-- DATA PARA QUE VERANO EN GAMA RETORNE VALORES
+
+INSERT INTO HistorialClienteProducto (clienteId, productoId, fecha, tipoAccion)
+VALUES 
+(10, 40, '2025-06-05 12:00:00', 'Compra'),
+(25, 80, '2025-06-15 14:30:00', 'Compra'),
+(30, 120, '2025-06-20 09:15:00', 'Compra'),
+(45, 38, '2025-07-01 16:00:00', 'Compra'),
+(50, 39, '2025-07-08 11:45:00', 'Compra'),
+(60, 120, '2025-08-10 13:30:00', 'Compra'),
+(75, 40, '2025-08-12 18:00:00', 'Compra'),
+(80, 39, '2025-08-25 20:15:00', 'Compra'),
+(90, 120, '2025-06-30 10:45:00', 'Compra'),
+(100, 38, '2025-08-02 19:30:00', 'Compra');
+
+INSERT INTO PromoEspecializada (id, promoId, productoId, categoriaId, marcaId)
+VALUES 
+(14, 41, 40, 8, 40),
+(15, 41, 80, 8, 40),
+(16, 41, 120, 8, 40),
+(17, 41, 38, 8, 40),
+(18, 41, 39, 8, 40);
