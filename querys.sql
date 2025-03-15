@@ -467,7 +467,7 @@ FROM
     JOIN Inventario i ON i.productoId = p.id
     JOIN Categoria c ON c.id = i.productoId
 WHERE
-    c.nombre = 'Chucherias';
+    LOWER(c.nombre) = LOWER('Chucherias');
 
 -- CONSULTA E LISTA DE PRODUCTOS RECOMENDADOS Y NO RECOMENDADOS ANTES Y DESPUES DE SU COMPRA
 SELECT
