@@ -300,7 +300,7 @@ FROM
                             JOIN Producto p ON p.id = od.productoId
                             JOIN Marca m ON m.id = p.categoriaId
                         WHERE
-                            m.nombre = 'Electrónica'
+                            LOWER(m.nombre) = LOWER('Electronica')
                         GROUP BY
                             oo3.id
                         INTERSECT -- Solo se quedaran las ordenes donde se hayan comparado al menos un producto de categoria 'Electrónica' y "Hogar"
@@ -313,7 +313,7 @@ FROM
                             JOIN Producto p1 ON p1.id = od1.productoId
                             JOIN Marca m1 ON m1.id = p1.categoriaId
                         WHERE
-                            m1.nombre = 'Hogar'
+                            LOWER(m1.nombre) = LOWER('Hogar')
                         GROUP BY
                             oo4.id
                     )
@@ -334,6 +334,32 @@ FROM
                     LOWER(fp.nombre) = LOWER('Tarjeta de credito')
                 GROUP BY
                     c3.id
+                INTERSECT
+                -- Condicion 4
+                -- El monto total gastado en esas órdenes es superior al promedio de gasto de todos los clientes en el mismo período (6 meses)
+                SELECT
+                    f3.clienteId as clienteId
+                FROM
+                    OrdenOnline oo6
+                    JOIN Factura f3 ON f3.id = oo6.facturaId
+                WHERE -- Filtra las ordenes que se han pagado con el metodo de pago 'Tarjeta de Crédito'
+                    f3.montoTotal > (
+                        SELECT
+                            AVG(t.montoTotal)
+                        FROM
+                            ( --- Promedio gastado de todos los clientes(cliente que compran online) en el mismo periodo
+                                SELECT
+                                    f4.clienteId,
+                                    SUM(f4.montoTotal) as montoTotal
+                                FROM
+                                    Factura f4
+                                    JOIN OrdenOnline oo7 ON oo7.facturaId = f4.id
+                                WHERE
+                                    oo7.fechaCreacion >= CONVERT(DATE, DATEADD (MONTH, -6, GETDATE ()))
+                                GROUP BY
+                                    f4.clienteId
+                            ) t
+                    )
             ) as ClienteCondicion
             JOIN Factura f ON f.clienteId = ClienteCondicion.clienteId
             JOIN OrdenOnline oo ON oo.facturaId = f.id
