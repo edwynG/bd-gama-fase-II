@@ -298,7 +298,7 @@ FROM
                             OrdenOnline oo3
                             JOIN OrdenDetalle od ON od.ordenId = oo3.id
                             JOIN Producto p ON p.id = od.productoId
-                            JOIN Marca m ON m.id = p.categoriaId
+                            JOIN Categoria m ON m.id = p.categoriaId
                         WHERE
                             LOWER(m.nombre) = LOWER('Electronica')
                         GROUP BY
@@ -311,7 +311,7 @@ FROM
                             OrdenOnline oo4
                             JOIN OrdenDetalle od1 ON od1.ordenId = oo4.id
                             JOIN Producto p1 ON p1.id = od1.productoId
-                            JOIN Marca m1 ON m1.id = p1.categoriaId
+                            JOIN Categoria m1 ON m1.id = p1.categoriaId
                         WHERE
                             LOWER(m1.nombre) = LOWER('Hogar')
                         GROUP BY
