@@ -39,88 +39,75 @@ FROM
     ) AS Temp ON te.id = Temp.id;
 
 -- 	Consulta B
-SELECT 
-	c.nombre AS NombreCliente, 
-	ClienteTotalFisico.MontoTotalFisico AS TotalGastadoComprasFisicas, 
-	ClienteTotalOnline.MontoTotalOnline AS TotalGastadoComprasOnline, 
-	MetodoPagoPredilecto.nombre AS MetodoPagoPredilecto
-
-FROM 
-	Cliente c 
-	JOIN (
+SELECT
+    c.nombre AS NombreCliente,
+    ClienteTotalFisico.MontoTotalFisico AS TotalGastadoComprasFisicas,
+    ClienteTotalOnline.MontoTotalOnline AS TotalGastadoComprasOnline,
+    MetodoPagoPredilecto.nombre AS MetodoPagoPredilecto
+FROM
+    Cliente c
+    JOIN (
         -- Obtengo el monto gastado en compras fisicas del cliente en la fecha actual
-		SELECT 
-			c1.id, 
-			SUM(f.montoTotal) AS MontoTotalFisico
-		
-		FROM VentaFisica vf 
-		JOIN Factura AS f ON vf.facturaId = f.id
-		JOIN Cliente AS c1 ON f.clienteId = c1.id
-		
-		
-		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
-		
-		GROUP BY c1.id
-	
-	) AS ClienteTotalFisico ON c.id = ClienteTotalFisico.id
-
-	JOIN 
-		(
-             -- Obtengo el monto gastado en compras online del cliente en la fecha actual
-		SELECT 
-			c1.id, 
-			SUM(f.montoTotal) AS MontoTotalOnline
-		
-		FROM OrdenOnline oo 
-		JOIN Factura AS f ON oo.facturaId = f.id
-		JOIN Cliente AS c1 ON f.clienteId = c1.id
-	
-		
-		WHERE YEAR(f.fechaEmision) = YEAR(GETDATE()) 
-		
-		GROUP BY c1.id
-	
-	) AS ClienteTotalOnline ON c.id = ClienteTotalOnline.id
-	
-	 JOIN(
-		SELECT 
-			fp.nombre, 
-			NombreFP.id
-		
-		FROM FormaPago AS fp
-
-        -- Join para obtener el nombre del metodo de pago
-		JOIN(
-	
-			SELECT 
-                -- Id del cliente, Id del metodo de pago mas usado
-				CantUsosMetodoPago.id, 
-				CantUsosMetodoPago.metodoPagoId AS IdMetodoMasUsado, 
-				MAX(CantUsosMetodoPago.UsosMetodoPago) AS maximo
-			
-			FROM (
-					SELECT 
-                     -- Id del cliente, junto a cuantas veces ha usado sus metodos de pago
-						c1.id, 
-						p.metodoPagoId, 
-						COUNT(p.metodoPagoId) AS UsosMetodoPago
-					
-					FROM Cliente c1
-					JOIN Factura AS f ON c1.id = f.clienteId
-					JOIN Pago AS p ON f.id = p.facturaId
-					JOIN FormaPago AS fp ON p.metodoPagoId = fp.id 
-		
-					GROUP BY c1.id, p.metodoPagoId
-					) AS CantUsosMetodoPago
-		
-			GROUP BY CantUsosMetodoPago.id, CantUsosMetodoPago.metodoPagoId
-			
-		) AS NombreFP ON fp.id = NombreFP.IdMetodoMasUsado
-		
-		
-	) AS MetodoPagoPredilecto ON c.id = MetodoPagoPredilecto.id
-
-
+        SELECT
+            c1.id,
+            SUM(f.montoTotal) AS MontoTotalFisico
+        FROM
+            VentaFisica vf
+            JOIN Factura AS f ON vf.facturaId = f.id
+            JOIN Cliente AS c1 ON f.clienteId = c1.id
+        WHERE
+            YEAR (f.fechaEmision) = YEAR (GETDATE ())
+        GROUP BY
+            c1.id
+    ) AS ClienteTotalFisico ON c.id = ClienteTotalFisico.id
+    JOIN (
+        -- Obtengo el monto gastado en compras online del cliente en la fecha actual
+        SELECT
+            c1.id,
+            SUM(f.montoTotal) AS MontoTotalOnline
+        FROM
+            OrdenOnline oo
+            JOIN Factura AS f ON oo.facturaId = f.id
+            JOIN Cliente AS c1 ON f.clienteId = c1.id
+        WHERE
+            YEAR (f.fechaEmision) = YEAR (GETDATE ())
+        GROUP BY
+            c1.id
+    ) AS ClienteTotalOnline ON c.id = ClienteTotalOnline.id
+    JOIN (
+        SELECT
+            fp.nombre,
+            NombreFP.id
+        FROM
+            FormaPago AS fp
+            -- Join para obtener el nombre del metodo de pago
+            JOIN (
+                SELECT
+                    -- Id del cliente, Id del metodo de pago mas usado
+                    CantUsosMetodoPago.id,
+                    CantUsosMetodoPago.metodoPagoId AS IdMetodoMasUsado,
+                    MAX(CantUsosMetodoPago.UsosMetodoPago) AS maximo
+                FROM
+                    (
+                        SELECT
+                            -- Id del cliente, junto a cuantas veces ha usado sus metodos de pago
+                            c1.id,
+                            p.metodoPagoId,
+                            COUNT(p.metodoPagoId) AS UsosMetodoPago
+                        FROM
+                            Cliente c1
+                            JOIN Factura AS f ON c1.id = f.clienteId
+                            JOIN Pago AS p ON f.id = p.facturaId
+                            JOIN FormaPago AS fp ON p.metodoPagoId = fp.id
+                        GROUP BY
+                            c1.id,
+                            p.metodoPagoId
+                    ) AS CantUsosMetodoPago
+                GROUP BY
+                    CantUsosMetodoPago.id,
+                    CantUsosMetodoPago.metodoPagoId
+            ) AS NombreFP ON fp.id = NombreFP.IdMetodoMasUsado
+    ) AS MetodoPagoPredilecto ON c.id = MetodoPagoPredilecto.id
     -- Consulta C
 SELECT
     p.nombre AS NombreProducto,
@@ -359,20 +346,22 @@ FROM
 SELECT
     (
         -- Cantidad de clientes que han realizado una segunda comprar detro de los 30 dias posteriores a la 1er compra
-        COUNT(clientesCondition.clienteId) / (
-            SELECT
-                COUNT(*)
-            FROM
-                ( --- Cantidad de clientes que han realizado compras
-                    SELECT
-                        c2.id
-                    FROM
-                        Cliente c2
-                        JOIN Factura f3 ON f3.clienteId = c2.id
-                    GROUP BY
-                        c2.id
-                ) as temp
-        )
+        CAST(
+            CAST(COUNT(clientesCondition.clienteId) AS FLOAT) / (
+                SELECT
+                    COUNT(*)
+                FROM
+                    ( --- Cantidad de clientes que han realizado compras
+                        SELECT
+                            c2.id
+                        FROM
+                            Cliente c2
+                            JOIN Factura f3 ON f3.clienteId = c2.id
+                        GROUP BY
+                            c2.id
+                    ) as temp
+            ) AS FLOAT
+        ) * 100
     ) as porcentajeClientes
 FROM
     (
@@ -398,8 +387,7 @@ FROM
         GROUP BY
             f2.clienteId
     ) clientesCondition
-
---- Consulta I
+    --- Consulta I
 SELECT
     p2.*,
     ContribucionProcentaje
