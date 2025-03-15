@@ -453,3 +453,23 @@ GO
 
 END;
 GO
+
+CREATE TRIGGER ActualizarInventario
+ON FacturaDetalle
+AFTER INSERT
+AS
+BEGIN
+    -- Actualizar el inventario restando la cantidad de los productos comprados
+    UPDATE inv
+    SET inv.cantidad = inv.cantidad - i.cantidad
+    FROM Inventario inv
+    INNER JOIN inserted i ON inv.productoId = i.productoId
+    WHERE inv.cantidad >= i.cantidad;
+
+    -- Verificar si se actualizó el inventario para todas las filas
+    IF (SELECT COUNT(*) FROM inserted) > (SELECT COUNT(*) FROM Inventario inv INNER JOIN inserted i ON inv.productoId = i.productoId WHERE inv.cantidad >= i.cantidad)
+    BEGIN
+        RAISERROR('No hay suficiente inventario para completar la compra.', 16, 1);
+        ROLLBACK TRANSACTION; -- Deshacer la transacción si no hay suficiente inventario
+    END
+END;
