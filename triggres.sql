@@ -466,10 +466,11 @@ BEGIN
     INNER JOIN inserted i ON inv.productoId = i.productoId
     WHERE inv.cantidad >= i.cantidad;
 
-    -- Verificar si se actualizó el inventario para todas las filas
-    IF (SELECT COUNT(*) FROM inserted) > (SELECT COUNT(*) FROM Inventario inv INNER JOIN inserted i ON inv.productoId = i.productoId WHERE inv.cantidad >= i.cantidad)
+   -- Verificar si hay inventario negativo
+    IF EXISTS (SELECT 1 FROM Inventario WHERE cantidad < 0)
     BEGIN
         RAISERROR('No hay suficiente inventario para completar la compra.', 16, 1);
-        ROLLBACK TRANSACTION; -- Deshacer la transacción si no hay suficiente inventario
+        ROLLBACK TRANSACTION; -- Deshacer la transacción si hay inventario negativo
     END
 END;
+GO
