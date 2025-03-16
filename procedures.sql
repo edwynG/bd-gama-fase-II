@@ -60,13 +60,6 @@ BEGIN
         montoIVA = @MontoIVA,
         montoTotal = @MontoTotal
     WHERE id = @FacturaId;
-
-    -- Actualizar el inventario
-    UPDATE Inventario
-    SET Inventario.cantidad = Inventario.cantidad - c.cantidad
-    FROM Inventario 
-    JOIN Carrito AS c ON Inventario.productoId = c.productoId
-    WHERE c.clienteId = @ClienteId;
     
     -- Vaciamos el carrito
     DELETE FROM Carrito WHERE clienteId = @ClienteId
