@@ -5,65 +5,72 @@
 CREATE PROCEDURE SimularCompraOnline (@ClienteId INT)
 AS
 BEGIN
-    DECLARE @OrdenOnlineId INT;
-    DECLARE @NroOrden INT;
-    DECLARE @FacturaId INT;
-    DECLARE @NroTransaccion INT;
-	DECLARE @TipoEnvioId INT
-	
-	SET @TipoEnvioId = 5;
-    -- Calcular el nuevo FacturaId basándose en el máximo existente
-    SELECT @FacturaId = ISNULL(MAX(id), 0) + 1
-    FROM Factura;
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        DECLARE @OrdenOnlineId INT;
+        DECLARE @NroOrden INT;
+        DECLARE @FacturaId INT;
+        DECLARE @NroTransaccion INT;
+        DECLARE @TipoEnvioId INT;
 
-    -- Calcular los datos de la orden online
-    SELECT @OrdenOnlineId = ISNULL(MAX(id), 0) + 1,
-           @NroOrden = ISNULL(MAX(nroOrden), 0) + 1  
-    FROM OrdenOnline;
+        SET @TipoEnvioId = 5;
+        -- Calcular el nuevo FacturaId basándose en el máximo existente
+        SELECT @FacturaId = ISNULL(MAX(id), 0) + 1
+        FROM Factura;
 
-    -- Insertar la orden online con el FacturaId calculado
-    INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
-    VALUES (@OrdenOnlineId, @ClienteId, @NroOrden, GETDATE(), @TipoEnvioId, @FacturaId);
+        -- Calcular los datos de la orden online
+        SELECT @OrdenOnlineId = ISNULL(MAX(id), 0) + 1,
+               @NroOrden = ISNULL(MAX(nroOrden), 0) + 1
+        FROM OrdenOnline;
 
-    -- El trigger se encargará de crear la factura si aún no existe
-    -- Actualizar los datos de la factura generada
-    DECLARE @SubTotal DECIMAL(10,2);
-    DECLARE @MontoDescuentoTotal DECIMAL(10,2);
-    DECLARE @PorcentajeIVA DECIMAL(5,2);
-    DECLARE @MontoIVA DECIMAL(10,2);
-    DECLARE @MontoTotal DECIMAL(10,2);
+        -- Insertar la orden online con el FacturaId calculado
+        INSERT INTO OrdenOnline (id, clienteId, nroOrden, fechaCreacion, tipoEnvioId, facturaId)
+        VALUES (@OrdenOnlineId, @ClienteId, @NroOrden, GETDATE(), @TipoEnvioId, @FacturaId);
 
-    -- Insertar los detalles de la orden
-    INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
-    SELECT @OrdenOnlineId, productoId, cantidad, precioPor
-    FROM Carrito
-    WHERE clienteId = @ClienteId;
+        -- Insertar los detalles de la orden
+        INSERT INTO OrdenDetalle (ordenId, productoId, cantidad, precioPor)
+        SELECT @OrdenOnlineId, productoId, cantidad, precioPor
+        FROM Carrito
+        WHERE clienteId = @ClienteId;
 
-    -- Insertar los detalles en FacturaDetalle
-    INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
-    SELECT @FacturaId, productoId, cantidad, precioPor
-    FROM Carrito
-    WHERE clienteId = @ClienteId;
-    
-    -- SET DE LOS VALORES NUEVOS PARA LA FACTURA
-    SET @SubTotal = dbo.subTotal(@FacturaId);
-    SET @MontoDescuentoTotal = dbo.montoDescuentoTotal(@FacturaId);
-    SET @PorcentajeIVA = 16;
-    SET @MontoIVA = dbo.montoIVA(@FacturaId);
-    SET @MontoTotal = dbo.montoTotal(@FacturaId);
-    
-    -- Actualizar los datos de la factura
-    UPDATE Factura
-    SET subTotal = @SubTotal,
-        montoDescuentoTotal = @MontoDescuentoTotal,
-        porcentajeIVA = @PorcentajeIVA,
-        montoIVA = @MontoIVA,
-        montoTotal = @MontoTotal
-    WHERE id = @FacturaId;
-    
-    -- Vaciamos el carrito
-    DELETE FROM Carrito WHERE clienteId = @ClienteId
-    
+        -- Insertar los detalles en FacturaDetalle
+        INSERT INTO FacturaDetalle (facturaId, productoId, cantidad, precioPor)
+        SELECT @FacturaId, productoId, cantidad, precioPor
+        FROM Carrito
+        WHERE clienteId = @ClienteId;
+
+        -- SET DE LOS VALORES NUEVOS PARA LA FACTURA
+        DECLARE @SubTotal DECIMAL(10,2);
+        DECLARE @MontoDescuentoTotal DECIMAL(10,2);
+        DECLARE @PorcentajeIVA DECIMAL(5,2);
+        DECLARE @MontoIVA DECIMAL(10,2);
+        DECLARE @MontoTotal DECIMAL(10,2);
+
+        SET @SubTotal = dbo.subTotal(@FacturaId);
+        SET @MontoDescuentoTotal = dbo.montoDescuentoTotal(@FacturaId);
+        SET @PorcentajeIVA = 16;
+        SET @MontoIVA = dbo.montoIVA(@FacturaId);
+        SET @MontoTotal = dbo.montoTotal(@FacturaId);
+
+        -- Actualizar los datos de la factura
+        UPDATE Factura
+        SET subTotal = @SubTotal,
+            montoDescuentoTotal = @MontoDescuentoTotal,
+            porcentajeIVA = @PorcentajeIVA,
+            montoIVA = @MontoIVA,
+            montoTotal = @MontoTotal
+        WHERE id = @FacturaId;
+
+        -- Vaciamos el carrito
+        DELETE FROM Carrito WHERE clienteId = @ClienteId;
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        -- Manejo de errores: hacer rollback y mostrar el error
+        ROLLBACK TRANSACTION;
+        PRINT 'Ocurrió un error: ' + ERROR_MESSAGE();
+    END CATCH;
 END;
 GO
 
